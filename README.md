@@ -1,4 +1,4 @@
-# SandScript
+# SandScript [![Build Status](https://travis-ci.org/Thimoteus/SandScript.svg?branch=master)](https://travis-ci.org/Thimoteus/SandScript) [![Dependency Status](https://gemnasium.com/Thimoteus/SandScript.svg)](https://gemnasium.com/Thimoteus/SandScript)
 
 A lisp-like language that compiles to JavaScript, written in Purescript (which is written in Haskell).
 
