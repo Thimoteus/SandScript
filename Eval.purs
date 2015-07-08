@@ -1,19 +1,16 @@
 module SandScript.Eval where
 
-import Prelude
+import Prelude 
 
 import Data.Maybe
-import Data.Tuple
-import qualified Data.String as S
 import Data.Either
 import Data.Foldable
 import Data.Traversable
-import Data.Array hiding (cons)
+import Data.Tuple
+import Data.Array (uncons, length, head, tail, (:), zip)
 import Data.Array.Unsafe (unsafeIndex)
 
-import Control.Monad.Error
 import Control.Monad.Error.Class
-import Control.Bind ((=<<))
 
 import SandScript.Types
 import SandScript.Errors
@@ -24,15 +21,15 @@ eval :: LispVal -> ThrowsError LispVal
 eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _) = return val
--- special list stuff
 eval (List [Atom "quote", val]) = return val
-eval (List [Atom "if", pred, conseq, alt]) = evalIf pred conseq alt
--- general list stuff
+eval (List [Atom "if", pred, conseq, alt]) = do
+  result <- eval pred
+  case result of
+       Bool false -> eval alt
+       Bool true -> eval conseq
+       notBool -> throwError $ TypeMismatch "bool" notBool
 eval (List ls) = case uncons ls of
-                      Just { head = Atom "case", tail = args } -> evalCase args
-                      Just { head = Atom "cond", tail = args } -> evalCond args
-                      Just { head = Atom func, tail = args } -> fapply func =<< traverse eval args
-                      _ -> throwError $ NotFunction "Did not recognize function" (show $ List ls)
+                      Just { head = Atom func, tail = args } -> traverse eval args >>= fapply func
 eval badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 
 fapply :: String -> Array LispVal -> ThrowsError LispVal
@@ -66,14 +63,6 @@ primitives = [ Tuple "+" (numericBinop (+))
              , Tuple "string>?" (strBoolBinop (>))
              , Tuple "string>=?" (strBoolBinop (>=))
              , Tuple "string<=?" (strBoolBinop (<=))
-             -- String -> Something
-             , Tuple "make-string" makeStr
-             , Tuple "string-length" strLength
-             , Tuple "string-ref" strRef
-             , Tuple "substring" substr
-             , Tuple "string-append" strAppend
-             , Tuple "string->list" str2list
-             , Tuple "list->string" list2str
              -- list operators
              , Tuple "car" car
              , Tuple "cdr" cdr
@@ -103,7 +92,7 @@ unpackNum (String s) = case readNum s of
                             Nothing -> throwError $ TypeMismatch "number" $ String s
 unpackNum (List [n]) = unpackNum n
 unpackNum notNum = throwError $ TypeMismatch "number" notNum
-
+ 
 unpackStr :: LispVal -> ThrowsError String
 unpackStr (String s) = return s
 unpackStr (Number n) = return $ show n
@@ -172,7 +161,7 @@ cons [x, List xs] = return $ List (x:xs)
 cons [x, DottedList xs xf] = return $ DottedList (x:xs) xf
 cons [x1, x2] = return $ DottedList [x1] x2
 cons badArgList = throwError $ NumArgs 2 badArgList
-
+ 
 eqv :: Array LispVal -> ThrowsError LispVal
 eqv [Bool b, Bool b'] = return $ Bool (b == b')
 eqv [Number m, Number n] = return $ Bool (m == n)
@@ -182,105 +171,15 @@ eqv [DottedList xs x, DottedList ys y] = eqv [List $ xs ++ [x], List $ ys ++ [y]
 eqv [List xs, List ys] = return $ Bool $ (length xs == length ys) && (all eqPair $ zip xs ys) where
   eqPair :: Tuple LispVal LispVal -> Boolean
   eqPair (Tuple v v') = case eqv [v, v'] of
-                             Left _ -> false
-                             Right (Bool val) -> val
+                              Left err -> false
+                              Right (Bool val) -> val
 eqv [_, _] = return $ Bool false
 eqv badArgList = throwError $ NumArgs 2 badArgList
 
--- conditional stuff
-evalIf :: LispVal -> LispVal -> LispVal -> ThrowsError LispVal
-evalIf pred conseq alt = do
-  result <- eval pred
-  case result of
-       Bool false -> eval alt
-       Bool true -> eval conseq
-       notBool -> throwError $ TypeMismatch "bool" notBool
-
-evalCase :: Array LispVal -> ThrowsError LispVal
-evalCase as = case uncons as of
-                  Just xs -> ecase xs.head xs.tail
-                  Nothing -> throwError $ NumArgs 1 []
-
-ecase :: LispVal -> Array LispVal -> ThrowsError LispVal
-ecase _ [] = throwError PatternFail
-ecase _ [List [Atom "else", val]] = eval val
-ecase key clauses = case uncons clauses of
-                          Just { head = List [List datums, val], tail = rest } -> if eqv' key datums
-                                                                                  then return val
-                                                                                  else ecase key rest
-                          Just xs -> throwError $ BadSpecialForm "Incorrect `case` syntax" xs.head
-                          Nothing -> throwError $ NumArgs 2 clauses
-
-eqv' :: LispVal -> Array LispVal -> Boolean
-eqv' k ds = let pairs :: Array (Array LispVal)
-                pairs = zipWith (\ a b -> [a, b]) (replicate (length ds) k) ds
-                evaled :: Array (ThrowsError (Array LispVal))
-                evaled = map (traverse eval) pairs
-                flipped :: ThrowsError (Array (Array LispVal))
-                flipped = sequence evaled
-             in case flipped of
-                     Left _ -> false
-                     Right evaled -> either (const false) (\ bs -> or $ map (\ (Bool b) -> b) bs) (traverse eqv evaled)
-
-evalCond :: Array LispVal -> ThrowsError LispVal
-evalCond clauses = case uncons clauses of
-                        Just { head = List [Atom "else", expr],  tail = [] } -> eval expr
-                        Just { head = List [test@(List ts), expr], tail = rest } -> condChecker test expr rest
-                        Just { head = List [test@(List ts)], tail = rest } -> condChecker test test rest
-                        Just xs -> throwError $ BadSpecialForm "Incorrect `cond` syntax" xs.head
-                        _ -> throwError $ ConditionalFail
-
-condChecker :: LispVal -> LispVal -> Array LispVal -> ThrowsError LispVal
-condChecker test expr rest
-  | either (const false) (\ (Bool b) -> b) (eval test) = eval expr
-  | otherwise = evalCond rest
-
--- string stuff
-makeStr :: Array LispVal -> ThrowsError LispVal
-makeStr [Number n, String c] = case S.toChar c of
-                                    Just chr -> return $ String <<< S.fromCharArray $ replicate n chr
-                                    Nothing -> throwError $ BadSpecialForm "Expected singleton string, found" (String c)
-makeStr [notNumber, String _] = throwError $ TypeMismatch "number" notNumber
-makeStr [Number _, notString] = throwError $ TypeMismatch "string" notString
-makeStr [x, y] = throwError $ BadSpecialForm "Incorrect `make-string` syntax" $ List [x, y]
-makeStr badArgs = throwError $ NumArgs 2 badArgs
-
-strLength :: Array LispVal -> ThrowsError LispVal
-strLength [String s] = return $ Number $ S.length s
-strLength [notString] = throwError $ TypeMismatch "string" notString
-strLength badArgs = throwError $ NumArgs 1 badArgs
-
-strRef :: Array LispVal -> ThrowsError LispVal
-strRef [String s, n@(Number k)] = case S.charAt k s of
-                                   Just c -> return $ String $ S.singleton c
-                                   Nothing -> throwError $ TypeMismatch ("index smaller than " ++ (show $ S.length s)) n
-strRef [notString, Number _] = throwError $ TypeMismatch "string" notString
-strRef [String _, notNumber] = throwError $ TypeMismatch "number" notNumber
-strRef [x, y] = throwError $ BadSpecialForm "Incorrect `string-ref` syntax" $ List [x, y]
-strRef badArgs = throwError $ NumArgs 2 badArgs
-
-substr :: Array LispVal -> ThrowsError LispVal
-substr [String s, i@(Number start), f@(Number end)]
-  | 0 <= start && start <= end && end <= S.length s = return $ String (s # S.take end # S.drop start)
-  | otherwise = throwError $ TypeMismatch ("indices between 0 and " ++ (show $ S.length s)) (List [i, f])
-substr [notString, Number _, Number _] = throwError $ TypeMismatch "string" notString
-substr [_, notNumber, Number _] = throwError $ TypeMismatch "number" notNumber
-substr [_, _, notNumber] = throwError $ TypeMismatch "number" notNumber
-substr [x, y, z] = throwError $ BadSpecialForm "Incorrect `substring` syntax" $ List [x,y,z]
-substr badArgs = throwError $ NumArgs 3 badArgs
-
-strAppend :: Array LispVal -> ThrowsError LispVal
-strAppend [] = throwError $ NumArgs 1 []
-strAppend args
-  | isJust $ traverse fromString args = return $ String $ foldl (\acc (String s) -> acc ++ s) "" args
-  | otherwise = throwError $ TypeMismatch "list of strings" $ List args
-
-str2list :: Array LispVal -> ThrowsError LispVal
-str2list [String s] = return $ List <<< map String $ toChars s
-str2list [notString] = throwError $ TypeMismatch "string" notString
-str2list badArgs = throwError $ NumArgs 1 badArgs
-
-list2str :: Array LispVal -> ThrowsError LispVal
-list2str [List ss]  = strAppend ss
-list2str [notList] = throwError $ TypeMismatch "list" notList
-list2str badArgs = throwError $ NumArgs 1 badArgs
+--rep :: String -> String
+--rep = show <<< eval <<< readExpr
+--rep = readExpr >=> eval >=> show
+-- readExpr :: String -> ThrowsError LispVal
+-- eval :: LispVal -> ThrowsError LispVal
+-- show :: (Show a) => a -> String
+-- (>=>) :: (a -> m b) -> (b -> m c) -> a -> m c 

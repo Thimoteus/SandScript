@@ -1,0 +1,7 @@
+.psci*
+bower_components/
+output/
+
+*~
+*.swp
+*.swo

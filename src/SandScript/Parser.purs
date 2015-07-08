@@ -1,14 +1,21 @@
 module SandScript.Parser where
 
+import Prelude
+
+import Data.List (fromList)
 import Data.Identity
 import Data.Maybe
+import Data.String
 import Data.Either
 import Data.Foldable
 import Data.Tuple
+import Data.Array (many, (:))
 
 import Control.Alt
 import Control.Alternative
 import Control.Lazy
+import Control.Monad.Error
+import Control.Monad.Error.Class
 
 import Text.Parsing.Parser
 import Text.Parsing.Parser.Combinators
@@ -16,8 +23,8 @@ import Text.Parsing.Parser.Expr
 import Text.Parsing.Parser.String
 import Text.Parsing.Parser.Token
 
-import SandScript.Util
 import SandScript.Types
+import SandScript.Util
 
 type SParser a = Parser String a
 
@@ -27,27 +34,27 @@ many1 par = do
   xs <- many par
   return (x:xs)
 
-symbol :: SParser String
-symbol = oneOf $ toChars "!#$%&|*+-/:<=>?@^_~"
+symbol :: SParser Char
+symbol = oneOf $ toCharArray "!#$%&|*+-/:<=>?@^_~"
 
-digit :: SParser String
-digit = oneOf $ toChars "0123456789"
+digit :: SParser Char
+digit = oneOf $ toCharArray "0123456789"
 
-letter :: SParser String
-letter = oneOf $ toChars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+letter :: SParser Char
+letter = oneOf $ toCharArray "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 parseString :: SParser LispVal
 parseString = do
-  string "\""
-  x <- many (noneOf ["\""] <|> string "\\\"")
-  string "\""
-  return $ String (unChars x)
+  char '"'
+  x <- many (noneOf ['"'] <|> (char '\\' >> char '"')) --string "\\\"")
+  char '"'
+  return $ String (fromCharArray x)
 
 parseAtom :: SParser LispVal
 parseAtom = do
   first <- letter <|> symbol
   rest <- many $ letter <|> symbol <|> digit
-  let atom = unChars $ first:rest
+  let atom = fromCharArray $ first:rest
   return $ case atom of
                 "#t" -> Bool true
                 "#f" -> Bool false
@@ -56,16 +63,18 @@ parseAtom = do
 parseNumber :: SParser LispVal
 parseNumber = do
   number <- many1 digit
-  return $ Number (str2Num $ unChars number)
+  return <<< Number <<< str2num $ fromCharArray number
 
 parseList :: SParser LispVal -> SParser LispVal
-parseList pars = List <$> pars `sepBy` whiteSpace
+parseList pars = do
+  x <- pars `sepBy` whiteSpace
+  return $ List (fromList x)
 
 parseDottedList :: SParser LispVal -> SParser LispVal
 parseDottedList pars = do
   head <- pars `endBy` whiteSpace
   tail <- string "." >> whiteSpace >> pars
-  return $ DottedList head tail
+  return $ DottedList (fromList head) tail
 
 parseQuoted :: SParser LispVal -> SParser LispVal
 parseQuoted pars = do
@@ -84,7 +93,7 @@ parseExpr = fix $ \ p -> (parseString
                          string ")"
                          return x))
 
-readExpr :: String -> LispVal
+readExpr :: String -> ThrowsError LispVal
 readExpr input = case runParser input parseExpr of
-                      Left (ParseError err) -> String $ "No match: " ++ err.message
-                      Right val -> val
+                      Left err -> throwError $ Parserr err
+                      Right val -> return val

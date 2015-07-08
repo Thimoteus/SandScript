@@ -1,6 +1,6 @@
 module Test.Main where
 
-import Debug.Trace
+import Control.Monad.Eff.Console
 
 main = do
-  trace "You should add some tests."
+  print "You should add some tests."

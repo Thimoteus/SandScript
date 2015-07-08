@@ -1,13 +1,14 @@
 module SandScript.Errors where
 
+import Prelude
+import Data.Either
 import Control.Monad.Error
 import Control.Monad.Error.Class
 import SandScript.Types
 
---trapError :: forall e m a. (MonadError e m, Show a) => m String -> m String
---trapError action = catchError action (return <<< show)
+--trapError :: forall e m. (MonadError e m, Show e, Applicative m) => m String -> m String
+trapError :: ThrowsError String -> ThrowsError String
+trapError action = catchError action ((return <<< show) :: LispError -> ThrowsError String)
 
-retShow :: forall e m. (MonadError e m, Show e) => e -> m String
-retShow = return <<< show
-
---return . show ::: e -> m String
+extractValue :: forall a. ThrowsError a -> a
+extractValue (Right val) = val

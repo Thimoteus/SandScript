@@ -1,27 +1,33 @@
 module SandScript.Types where
 
+import Prelude
+
 import SandScript.Util
 import Text.Parsing.Parser
 import Control.Monad.Error
 import Data.Either
+import Data.Maybe
 
 data LispVal = Atom String
-             | List [LispVal]
-             | DottedList [LispVal] LispVal
-             | Number Number
+             | List (Array LispVal)
+             | DottedList (Array LispVal) LispVal
+             | Number Int
              | String String
              | Bool Boolean
 
-data LispError = NumArgs Number [LispVal]
+data LispError = NumArgs Int (Array LispVal)
                | TypeMismatch String LispVal
-               | Parser ParseError
+               | Parserr ParseError
                | BadSpecialForm String LispVal
                | NotFunction String String
                | UnboundedVar String String
+               | PatternFail
+               | ConditionalFail
                | Default String
 
 instance showLispVal :: Show LispVal where
   show (Atom s) = s
+  show (List [Atom "quote", x]) = "'" ++ show x
   show (List xs) = "(" ++ unwordsList xs ++ ")"
   show (DottedList xs x) = "(" ++ unwordsList xs ++ " . " ++ show x ++ ")"
   show (Number n) = show n
@@ -33,13 +39,32 @@ instance showLispVal :: Show LispVal where
 instance showLispError :: Show LispError where
   show (NumArgs expected found) = "Expected " ++ show expected ++ " args, found values " ++ unwordsList found
   show (TypeMismatch expected found) = "Invalid type: expected " ++ expected ++ ", found " ++ show found
-  show (Parser parserr) = "Parse error at " ++ show parserr
+  show (Parserr parserr) = "Parse error at " ++ show parserr
   show (BadSpecialForm msg form) = msg ++ ": " ++ show form
   show (NotFunction msg func) = msg ++ ": " ++ func
   show (UnboundedVar msg varname) = msg ++ ": " ++ varname
+  show (PatternFail) = "Pattern match fail. Suggestion: include an `else` clause."
+  show (ConditionalFail) = "Conditional fail. Suggestion: include an `else` clause."
 
 instance lispError :: Error LispError where
   noMsg = Default "An error has occurred"
   strMsg = Default
 
-type ThrowsError = Either LispError
+type ThrowsError a = Either LispError a
+
+fromNumber :: LispVal -> Maybe Int
+fromNumber (Number n) = return n
+fromNumber _ = Nothing
+
+fromString :: LispVal -> Maybe String
+fromString (String s) = return s
+fromString _ = Nothing
+
+fromBool :: LispVal -> Maybe Boolean
+fromBool (Bool b) = return b
+fromBool _ = Nothing
+
+fromAtom :: LispVal -> Maybe String
+fromAtom (Atom s) = return s
+fromAtom _ = Nothing
+
