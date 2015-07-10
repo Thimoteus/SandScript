@@ -76,9 +76,12 @@ primitives = [ Tuple "+" (numericBinop (+))
              , Tuple "list->string" list2str
              -- list operators
              , Tuple "car" car
+             , Tuple "head" car
              , Tuple "cdr" cdr
+             , Tuple "tail" cdr
              , Tuple "cons" cons
              , Tuple "eq?" eqv
+             , Tuple "eqv?" eqv
              -- String -> String
              , Tuple "symbol->string" sym2str
              , Tuple "string->symbol" str2sym ]

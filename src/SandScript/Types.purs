@@ -2,11 +2,17 @@ module SandScript.Types where
 
 import Prelude
 
-import SandScript.Util
-import Text.Parsing.Parser
-import Control.Monad.Error
 import Data.Either
 import Data.Maybe
+import Data.Tuple
+
+import Control.Monad.Error
+import Control.Monad.Error.Trans
+import Control.Monad.Eff
+import Control.Monad.Eff.Ref
+
+import Text.Parsing.Parser
+import SandScript.Util
 
 data LispVal = Atom String
              | List (Array LispVal)
@@ -51,6 +57,11 @@ instance lispError :: Error LispError where
   strMsg = Default
 
 type ThrowsError a = Either LispError a
+
+type Env = Ref (Array (Tuple String (Ref LispVal)))
+
+type REff r = Eff (ref :: REF | r)
+type EffThrowsError r a = ErrorT LispError (REff r) a
 
 fromNumber :: LispVal -> Maybe Int
 fromNumber (Number n) = return n

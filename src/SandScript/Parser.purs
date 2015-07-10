@@ -43,10 +43,16 @@ digit = oneOf $ toCharArray "0123456789"
 letter :: SParser Char
 letter = oneOf $ toCharArray "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+escapedChars :: SParser Char
+escapedChars = do
+  char '\\'
+  x <- oneOf ['\\', '"']
+  return x
+
 parseString :: SParser LispVal
 parseString = do
   char '"'
-  x <- many (noneOf ['"'] <|> (char '\\' >> char '"')) --string "\\\"")
+  x <- many (noneOf ['"', '\\'] <|> escapedChars)
   char '"'
   return $ String (fromCharArray x)
 
