@@ -19,21 +19,26 @@ import SandScript.Types
 import SandScript.Errors
 import SandScript.Util
 import SandScript.Parser
+import SandScript.Variables
 
-eval :: LispVal -> ThrowsError LispVal
-eval val@(String _) = return val
-eval val@(Number _) = return val
-eval val@(Bool _) = return val
+eval :: forall r. Env -> LispVal -> EffThrowsError r LispVal
+eval env val@(String _) = return val
+eval env val@(Number _) = return val
+eval env val@(Bool _) = return val
+-- variables
+eval env (Atom id) = getVar env id
 -- special list stuff
-eval (List [Atom "quote", val]) = return val
-eval (List [Atom "if", pred, conseq, alt]) = evalIf pred conseq alt
+eval env (List [Atom "quote", val]) = return val
+eval env (List [Atom "if", pred, conseq, alt]) = evalIf env pred conseq alt
+eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
+eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
 -- general list stuff
-eval (List ls) = case uncons ls of
-                      Just { head = Atom "case", tail = args } -> evalCase args
-                      Just { head = Atom "cond", tail = args } -> evalCond args
-                      Just { head = Atom func, tail = args } -> fapply func =<< traverse eval args
-                      _ -> throwError $ NotFunction "Did not recognize function" (show $ List ls)
-eval badform = throwError $ BadSpecialForm "Unrecognized special form" badform
+eval env (List ls) = case uncons ls of
+                          -- Just { head = Atom "case", tail = args } -> evalCase env args
+                          -- Just { head = Atom "cond", tail = args } -> evalCond env args
+                          Just { head = Atom func, tail = args } -> liftThrows <<< fapply func =<< traverse (eval env) args
+                          _ -> throwError $ NotFunction "Did not recognize function" (show $ List ls)
+eval env badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 
 fapply :: String -> Array LispVal -> ThrowsError LispVal
 fapply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func)
@@ -191,53 +196,55 @@ eqv [_, _] = return $ Bool false
 eqv badArgList = throwError $ NumArgs 2 badArgList
 
 -- conditional stuff
-evalIf :: LispVal -> LispVal -> LispVal -> ThrowsError LispVal
-evalIf pred conseq alt = do
-  result <- eval pred
+evalIf :: forall r. Env -> LispVal -> LispVal -> LispVal -> EffThrowsError r LispVal
+evalIf env pred conseq alt = do
+  result <- eval env pred
   case result of
-       Bool false -> eval alt
-       Bool true -> eval conseq
+       Bool false -> eval env alt
+       Bool true -> eval env conseq
        notBool -> throwError $ TypeMismatch "bool" notBool
 
-evalCase :: Array LispVal -> ThrowsError LispVal
-evalCase as = case uncons as of
-                  Just xs -> ecase xs.head xs.tail
-                  Nothing -> throwError $ NumArgs 1 []
+{--
+evalCase :: forall r. Env -> Array LispVal -> EffThrowsError r LispVal
+evalCase env as = case uncons as of
+                       Just xs -> ecase env xs.head xs.tail
+                       Nothing -> throwError $ NumArgs 1 []
 
-ecase :: LispVal -> Array LispVal -> ThrowsError LispVal
-ecase _ [] = throwError PatternFail
-ecase _ [List [Atom "else", val]] = eval val
-ecase key clauses = case uncons clauses of
-                          Just { head = List [List datums, val], tail = rest } -> if eqv' key datums
-                                                                                  then return val
-                                                                                  else ecase key rest
-                          Just xs -> throwError $ BadSpecialForm "Incorrect `case` syntax" xs.head
-                          Nothing -> throwError $ NumArgs 2 clauses
+ecase :: forall r. Env -> LispVal -> Array LispVal -> EffThrowsError r LispVal
+ecase _ _ [] = throwError PatternFail
+ecase env _ [List [Atom "else", val]] = eval env val
+ecase env key clauses = case uncons clauses of
+                             Just { head = List [List datums, val], tail = rest } -> if eqv' env key datums
+                                                                                        then return val
+                                                                                        else ecase env key rest
+                             Just xs -> throwError $ BadSpecialForm "Incorrect `case` syntax" xs.head
+                             Nothing -> throwError $ NumArgs 2 clauses
 
-eqv' :: LispVal -> Array LispVal -> Boolean
-eqv' k ds = let pairs :: Array (Array LispVal)
-                pairs = zipWith (\ a b -> [a, b]) (replicate (length ds) k) ds
-                evaled :: Array (ThrowsError (Array LispVal))
-                evaled = map (traverse eval) pairs
-                flipped :: ThrowsError (Array (Array LispVal))
-                flipped = sequence evaled
-             in case flipped of
-                     Left _ -> false
-                     Right evaled -> either (const false) (\ bs -> or $ map (\ (Bool b) -> b) bs) (traverse eqv evaled)
+eqv' :: Env -> LispVal -> Array LispVal -> Boolean
+eqv' env k ds = let pairs :: Array (Array LispVal)
+                    pairs = zipWith (\ a b -> [a, b]) (replicate (length ds) k) ds
+                    evaled :: forall r. Array (EffThrowsError r (Array LispVal))
+                    evaled = map (traverse (eval env)) pairs
+                    flipped :: forall r. EffThrowsError r (Array (Array LispVal))
+                    flipped = sequence evaled
+                    ran :: forall r. (REff r) (Either LispError (Array (Array LispVal) ))
+                    ran = runErrorT flipped
+                 in case flipped of
+                         Left _ -> false
+                         Right evald -> either (const false) (\ bs -> or $ map (\ (Bool b) -> b) bs) (traverse eqv evald)
+evalCond :: forall r. Env -> Array LispVal -> EffThrowsError r LispVal
+evalCond env clauses = case uncons clauses of
+                            Just { head = List [Atom "else", expr],  tail = [] } -> eval env expr
+                            Just { head = List [test@(List ts), expr], tail = rest } -> condChecker env test expr rest
+                            Just { head = List [test@(List ts)], tail = rest } -> condChecker env test test rest
+                            Just xs -> throwError $ BadSpecialForm "Incorrect `cond` syntax" xs.head
+                            _ -> throwError ConditionalFail
 
-evalCond :: Array LispVal -> ThrowsError LispVal
-evalCond clauses = case uncons clauses of
-                        Just { head = List [Atom "else", expr],  tail = [] } -> eval expr
-                        Just { head = List [test@(List ts), expr], tail = rest } -> condChecker test expr rest
-                        Just { head = List [test@(List ts)], tail = rest } -> condChecker test test rest
-                        Just xs -> throwError $ BadSpecialForm "Incorrect `cond` syntax" xs.head
-                        _ -> throwError $ ConditionalFail
-
-condChecker :: LispVal -> LispVal -> Array LispVal -> ThrowsError LispVal
-condChecker test expr rest
-  | either (const false) (\ (Bool b) -> b) (eval test) = eval expr
-  | otherwise = evalCond rest
-
+condChecker :: forall r. Env -> LispVal -> LispVal -> Array LispVal -> EffThrowsError r LispVal
+condChecker env test expr rest
+  | either (const false) (\ (Bool b) -> b) (eval test) = eval expr -- TODO: (eval test) !:: Either _ _, but ErorrT _ _ _
+  | otherwise = evalCond env rest
+  --}
 -- string stuff
 makeStr :: Array LispVal -> ThrowsError LispVal
 makeStr [Number n, String c] = case S.toChar c of

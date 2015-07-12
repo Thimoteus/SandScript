@@ -24,6 +24,10 @@ liftThrows (Right val) = return val
 runEffThrows :: forall r.  EffThrowsError r String -> (REff r) String
 runEffThrows action = runErrorT (trapError' action) >>= return <<< extractValue
 
+errorT :: forall e m a b. (Functor m) => (e -> b) -> (a -> b) -> ErrorT e m a -> m b
+errorT onErr onSucc errT = either onErr onSucc <$> runErrorT errT
+
+
 {--
 
 runErrorT :: ErrorT e m a -> m (Either e a)

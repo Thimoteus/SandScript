@@ -46,7 +46,7 @@ letter = oneOf $ toCharArray "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
 escapedChars :: SParser Char
 escapedChars = do
   char '\\'
-  x <- oneOf ['\\', '"']
+  x <- oneOf ['\\', '"', '\n', '\r', '\t']
   return x
 
 parseString :: SParser LispVal
@@ -100,6 +100,6 @@ parseExpr = fix $ \ p -> (parseString
                          return x))
 
 readExpr :: String -> ThrowsError LispVal
-readExpr input = case runParser input parseExpr of
+readExpr input = case runParser input (whiteSpace >> parseExpr) of
                       Left err -> throwError $ Parserr err
                       Right val -> return val

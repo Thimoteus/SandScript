@@ -62,20 +62,33 @@ type Env = Ref (Array (Tuple String (Ref LispVal)))
 
 type REff r = Eff (ref :: REF | r)
 type EffThrowsError r a = ErrorT LispError (REff r) a
+-- e = LispError, m = (REff r), a = a
 
 fromNumber :: LispVal -> Maybe Int
 fromNumber (Number n) = return n
 fromNumber _ = Nothing
+isNumber :: LispVal -> Boolean
+isNumber (Number _) = true
+isNumber _ = false
 
 fromString :: LispVal -> Maybe String
 fromString (String s) = return s
 fromString _ = Nothing
+isString :: LispVal -> Boolean
+isString (String _) = true
+isString _ = false
 
 fromBool :: LispVal -> Maybe Boolean
 fromBool (Bool b) = return b
 fromBool _ = Nothing
+isBool :: LispVal -> Boolean
+isBool (Bool _) = true
+isBool _ = false
 
 fromAtom :: LispVal -> Maybe String
 fromAtom (Atom s) = return s
 fromAtom _ = Nothing
+isAtom :: LispVal -> Boolean
+isAtom (Atom _) = true
+isAtom _ = false
 
