@@ -17,26 +17,26 @@ import SandScript.Types
 import SandScript.Util
 import SandScript.Eval.Primitives
 
-nullEnv :: forall r. REff r Env
+nullEnv :: LispF Env
 nullEnv = newRef []
 
-primitiveBindings :: forall r. REff r Env
+primitiveBindings :: LispF Env
 primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc PrimitiveFunc) primitives) where
   --makePrimitiveFunc (Tuple var func) = Tuple var (PrimitiveFunc func)
   makeFunc constructor (Tuple var func) = Tuple var (constructor func)
 --primitives :: Array (Tuple String (Array LispVal -> ThrowsError LispVal))
 
-isBound :: forall r. Env -> String -> REff r Boolean
+isBound :: Env -> String -> LispF Boolean
 isBound envRef var = readRef envRef >>= return <<< maybe false (const true) <<< lookup var
 
-getVar :: forall r. Env -> String -> EffThrowsError r LispVal
+getVar :: Env -> String -> EffThrowsError LispVal
 getVar envRef var = do
   env <- liftEff $ readRef envRef
   maybe (throwError $ UnboundedVar "Getting an unbound variable" var)
         (liftEff <<< readRef)
         (lookup var env)
 
-setVar :: forall r. Env -> String -> LispVal -> EffThrowsError r LispVal
+setVar :: Env -> String -> LispVal -> EffThrowsError LispVal
 setVar envRef var value = do
   env <- liftEff $ readRef envRef
   maybe (throwError $ UnboundedVar "Setting an unbound variable" var)
@@ -44,7 +44,7 @@ setVar envRef var value = do
         (lookup var env)
   return value
 
-defineVar :: forall r. Env -> String -> LispVal -> EffThrowsError r LispVal
+defineVar :: Env -> String -> LispVal -> EffThrowsError LispVal
 defineVar envRef var value = do
   alreadyDefined <- liftEff $ isBound envRef var
   if alreadyDefined
@@ -55,7 +55,7 @@ defineVar envRef var value = do
       liftEff $ writeRef envRef ((Tuple var valueRef) : env)
       return value
 
-bindVars :: forall r. Env -> Array (Tuple String LispVal) -> REff r Env
+bindVars :: Env -> Array (Tuple String LispVal) -> LispF Env
 bindVars envRef bindings = readRef envRef >>= extendEnv bindings >>= newRef where
   extendEnv bindings env = map (++ env) (traverse addBindings bindings)
   addBindings (Tuple var value) = do

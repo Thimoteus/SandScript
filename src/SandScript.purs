@@ -14,14 +14,14 @@ import SandScript.Variables (primitiveBindings)
 
 import Node.ReadLine
 
-evalString :: forall r. Env -> String -> REff r String
+evalString :: forall r. Env -> String -> LispF String
 evalString env expr = runEffThrows $ liftA1 show $ (liftThrows $ readExpr expr) >>= eval env
 
 main :: LispF Interface
 main = do
   interface <- createInterface noCompletion
 
-  let lineHandler :: forall r. Env -> String -> REff (console :: CONSOLE | r) Interface
+  let lineHandler :: Env -> String -> LispF Interface
       lineHandler env args = do
         evaled <- evalString env args
         log evaled

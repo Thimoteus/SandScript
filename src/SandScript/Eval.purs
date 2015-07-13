@@ -21,7 +21,7 @@ import SandScript.Util
 import SandScript.Parser
 import SandScript.Variables
 
-eval :: forall r. Env -> LispVal -> EffThrowsError r LispVal
+eval :: Env -> LispVal -> EffThrowsError LispVal
 eval env val@(String _) = return val
 eval env val@(Number _) = return val
 eval env val@(Bool _) = return val
@@ -59,7 +59,7 @@ eval env (List ls)
                      _ -> throwError $ NotFunction "Did not recognize function" (show $ List ls)
 eval env badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 
-fapply :: forall r. LispVal -> Array LispVal -> EffThrowsError r LispVal
+fapply :: LispVal -> Array LispVal -> EffThrowsError LispVal
 fapply (PrimitiveFunc func) args = liftThrows $ func args
 fapply (Func { params = params, varargs = varargs, body = body, closure = closure }) args =
   if (length params /= length args) && isNothing varargs
@@ -71,13 +71,13 @@ fapply (Func { params = params, varargs = varargs, body = body, closure = closur
                                   Just argName -> liftEff $ bindVars env [Tuple argName (List remainingArgs)]
                                   Nothing -> return env
 
-makeFunc :: forall r. Maybe String -> Env -> Array LispVal -> Array LispVal -> EffThrowsError r LispVal
+makeFunc :: Maybe String -> Env -> Array LispVal -> Array LispVal -> EffThrowsError LispVal
 makeFunc varargs env params body = return $ Func { params: (map show params), varargs: varargs, body: body, closure: env }
 makeNormalFunc = makeFunc Nothing
 makeVarArgs = makeFunc <<< Just <<< (show :: LispVal -> String)
 
 -- conditional stuff
-evalIf :: forall r. Env -> LispVal -> LispVal -> LispVal -> EffThrowsError r LispVal
+evalIf :: Env -> LispVal -> LispVal -> LispVal -> EffThrowsError LispVal
 evalIf env pred conseq alt = do
   result <- eval env pred
   case result of

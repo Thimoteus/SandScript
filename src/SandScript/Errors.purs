@@ -11,17 +11,17 @@ import SandScript.Types
 trapError :: ThrowsError String -> ThrowsError String
 trapError action = catchError action ((return <<< show) :: LispError -> ThrowsError String)
 
-trapError' :: forall r. EffThrowsError r String -> EffThrowsError r String
-trapError' action = catchError action ((return <<< show) :: LispError -> EffThrowsError r String)
+trapError' :: EffThrowsError String -> EffThrowsError String
+trapError' action = catchError action ((return <<< show) :: LispError -> EffThrowsError String)
 
 extractValue :: forall a. ThrowsError a -> a
 extractValue (Right val) = val
 
-liftThrows :: forall r a. ThrowsError a -> EffThrowsError r a
+liftThrows :: forall a. ThrowsError a -> EffThrowsError a
 liftThrows (Left err) = throwError err
 liftThrows (Right val) = return val
 
-runEffThrows :: forall r.  EffThrowsError r String -> (REff r) String
+runEffThrows :: EffThrowsError String -> LispF String
 runEffThrows action = runErrorT (trapError' action) >>= return <<< extractValue
 
 errorT :: forall e m a b. (Functor m) => (e -> b) -> (a -> b) -> ErrorT e m a -> m b

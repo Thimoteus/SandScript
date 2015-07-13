@@ -21,11 +21,11 @@ type ThrowsError a = Either LispError a
 
 type Env = Ref (Array (Tuple String (Ref LispVal)))
 
-type REff r = Eff (ref :: REF | r)
-
-type EffThrowsError r a = ErrorT LispError (REff r) a
+type EffThrowsError a = ErrorT LispError LispF a
+-- REff r = Eff ( ref :: REF | r )
+-- EffThrowsError r a = ErrorT LispError (REff r) a
 -- e = LispError, m = (REff r), a = a
-type LispF = Eff LispFH
+type LispF = Eff LispFH 
 
 foreign import data LispEff :: !
 
@@ -38,7 +38,7 @@ data LispVal = Atom String
              | PrimitiveFunc (Array LispVal -> ThrowsError LispVal)
              | Func { params :: Array String, varargs :: Maybe String
                     , body :: Array LispVal, closure :: Env }
-             | EffFunc (Array LispVal -> EffThrowsError LispFH LispVal)
+             | EffFunc (Array LispVal -> EffThrowsError LispVal)
 
 data LispError = NumArgs Int (Array LispVal)
                | TypeMismatch String LispVal
