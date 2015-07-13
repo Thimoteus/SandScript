@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Maybe
 import Data.Tuple
-import Data.Array
+import Data.Array hiding (cons)
 import Data.Traversable
 
 import Control.Monad.Eff
@@ -15,9 +15,16 @@ import Control.Monad.Error.Class
 
 import SandScript.Types
 import SandScript.Util
+import SandScript.Eval.Primitives
 
-nullEnv :: forall r. Eff (ref :: REF | r) Env
+nullEnv :: forall r. REff r Env
 nullEnv = newRef []
+
+primitiveBindings :: forall r. REff r Env
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc PrimitiveFunc) primitives) where
+  --makePrimitiveFunc (Tuple var func) = Tuple var (PrimitiveFunc func)
+  makeFunc constructor (Tuple var func) = Tuple var (constructor func)
+--primitives :: Array (Tuple String (Array LispVal -> ThrowsError LispVal))
 
 isBound :: forall r. Env -> String -> REff r Boolean
 isBound envRef var = readRef envRef >>= return <<< maybe false (const true) <<< lookup var

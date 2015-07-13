@@ -12,11 +12,17 @@ Run `pulp dep install`, then `pulp run` to get a REPL.
 
 Everything is an [S-expression](https://en.wikipedia.org/wiki/S-expression). [Quoted lists](http://stackoverflow.com/questions/134887/when-to-use-quote-in-lisp) are supported.
 
+Defining variables is done with `def`, and bound variables can be rebound with `set`.
+
+Defining functions is similar to defining a variable, for an example, see the section on rational number arithmetic below.
+
 # Semantics
 
 ## Data types
 
 Primitive types come in four flavors: atoms ('atom), strings ("hello world"), bools (#t, #f) and natural numbers (0, 1, 2, ... ). There are two types of collections, lists and [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp), both of which are heterogeneous.
+
+
 
 # Questions That Might Be Asked Frequently
 
@@ -30,7 +36,17 @@ You can get integers, but for those smaller than 0 you'll need to write `(- 0 n)
 
 ### What about rationals?
 
-Rationals are just pairs of integers. If you want to use them you'll have to define arithmetic operators according to the axioms of a [field](https://en.wikipedia.org/wiki/Field_%28mathematics%29#First_example:_rational_numbers). Currently however, this is not possible as defining functions in the language itself has not been implemented.
+Rationals are just pairs of integers. If you want to use them you'll have to define arithmetic operators according to the axioms of a [field](https://en.wikipedia.org/wiki/Field_%28mathematics%29#First_example:_rational_numbers). 
+
+For example:
+
+```clojure
+(def (plus x1 y1 x2 y2) (cons (+ (* x1 y2) (* x2 y1)) (* y1 y2)))
+(def (times x1 y1 x2 y2) (cons (* x1 x2) (* y1 y2)))
+(def (neg x y) (cons (- 0 x) y))
+```
+
+etc.
 
 ### Are you planning on adding these features in the future?
 

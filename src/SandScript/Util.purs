@@ -2,11 +2,13 @@ module SandScript.Util where
 
 import Prelude
 
-import Data.Array.Unsafe (head, tail)
+import Data.Array.Unsafe (head, tail, unsafeIndex)
+import Data.Array (length, drop)
 import Data.Foreign
 import Data.Foreign.Class
 import Data.Foldable
 import Data.Maybe
+import Data.Tuple
 
 import qualified Data.String as S
 
@@ -31,6 +33,15 @@ foldl1 f xs = foldl f (head xs) (tail xs)
 readNum :: String -> Maybe Int
 readNum s | s == show (str2num s) = Just $ str2num s
           | otherwise = Nothing
+
+uncons2 :: forall a. Array a -> Maybe { first :: a, second :: a, rest :: Array a }
+uncons2 xs
+  | length xs < 3 = Nothing
+  | otherwise = Just { first: xs `unsafeIndex` 0, second: xs `unsafeIndex` 1, rest: drop 2 xs }
+
+(&) :: forall a b. a -> b -> Tuple a b
+(&) = Tuple
+infixr 0 &
 
 foreign import str2num :: String -> Int
 

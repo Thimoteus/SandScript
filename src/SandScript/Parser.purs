@@ -62,8 +62,8 @@ parseAtom = do
   rest <- many $ letter <|> symbol <|> digit
   let atom = fromCharArray $ first:rest
   return $ case atom of
-                "#t" -> Bool true
-                "#f" -> Bool false
+                "true" -> Bool true
+                "false" -> Bool false
                 _ -> Atom atom
 
 parseNumber :: SParser LispVal
@@ -99,7 +99,15 @@ parseExpr = fix $ \ p -> (parseString
                          string ")"
                          return x))
 
-readExpr :: String -> ThrowsError LispVal
-readExpr input = case runParser input (whiteSpace >> parseExpr) of
-                      Left err -> throwError $ Parserr err
-                      Right val -> return val
+readOrThrow :: forall a. SParser a -> String -> ThrowsError a
+readOrThrow parser input = case runParser input parser of
+                                Left err -> throwError $ Parserr err
+                                Right val -> return val
+
+readExpr = readOrThrow parseExpr
+readExprList = readOrThrow (endBy parseExpr whiteSpace)
+
+--readExpr :: String -> ThrowsError LispVal
+--readExpr input = case runParser input (whiteSpace >> parseExpr) of
+                      --Left err -> throwError $ Parserr err
+                      --Right val -> return val
