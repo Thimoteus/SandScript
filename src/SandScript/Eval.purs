@@ -15,11 +15,17 @@ import Control.Monad.Error.Class
 import Control.Bind ((=<<))
 import Control.Monad.Eff.Class (liftEff)
 
+import Node.FS
+import Node.FS.Sync
+import Node.Buffer (toString)
+import Node.Encoding
+
 import SandScript.Types
 import SandScript.Errors
 import SandScript.Util
 import SandScript.Parser
 import SandScript.Variables
+import SandScript.Eval.Primitives
 
 eval :: Env -> LispVal -> EffThrowsError LispVal
 eval env val@(String _) = return val
@@ -32,6 +38,7 @@ eval env (List [Atom "quote", val]) = return val
 eval env (List [Atom "if", pred, conseq, alt]) = evalIf env pred conseq alt
 eval env (List [Atom "set", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "def", Atom var, form]) = eval env form >>= defineVar env var
+eval env (List [Atom "load", String filename]) = load filename >>= map U.last <<< traverse (eval env)
 -- general list stuff
 eval env (List ls)
   | ls !! 0 == Just (Atom "def") =
@@ -84,6 +91,43 @@ evalIf env pred conseq alt = do
        Bool false -> eval env alt
        Bool true -> eval env conseq
        notBool -> throwError $ TypeMismatch "bool" notBool
+
+-- EffPrimitives
+
+effPrimitives :: Array (Tuple String ((Array LispVal) -> EffThrowsError LispVal))
+effPrimitives = [ "apply" & applyProc
+                , "open-input-file" & makePort R
+                , "open-output-file" & makePort W
+                , "close-input-port" & closePort
+                , "read-contents" & readContents
+                , "read-all" & readAll
+                , "close-output-port" & closePort ]
+
+applyProc :: Array LispVal -> EffThrowsError LispVal
+applyProc [func, List args] = fapply func args
+applyProc arr | length arr > 0 = fapply (U.head arr) (U.tail arr)
+
+makePort :: FileFlags -> Array LispVal -> EffThrowsError LispVal
+makePort flag [String filename] = liftEff $ Port <$> fdOpen filename flag Nothing
+
+closePort :: Array LispVal -> EffThrowsError LispVal
+closePort [Port port] = liftEff $ fdClose port >> (return $ Bool true)
+closePort _ = return $ Bool false
+
+readContents :: Array LispVal -> EffThrowsError LispVal
+readContents [String filename] = liftEff $ (String <<< toString ASCII) <$> readFile filename
+
+load :: String -> EffThrowsError (Array LispVal)
+load filename = (liftEff $ toString ASCII <$> readFile filename) >>= (liftThrows <<< readExprList)
+
+readAll :: Array LispVal -> EffThrowsError LispVal
+readAll [String filename] = map List $ load filename
+
+primitiveBindings :: LispF Env
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' PrimitiveFunc) primitives ++ map (makeFunc' EffFunc) effPrimitives)
+  where
+  makeFunc' :: forall a. (a -> LispVal) -> Tuple String a -> Tuple String LispVal
+  makeFunc' constructor (Tuple var func) = Tuple var (constructor func)
 
 {--
 evalCase :: forall r. Env -> Array LispVal -> EffThrowsError r LispVal

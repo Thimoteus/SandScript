@@ -34,6 +34,9 @@ many1 par = do
   xs <- many par
   return (x:xs)
 
+endByArr :: forall a sep. SParser a -> SParser sep -> SParser (Array a)
+endByArr x s = fromList <$> endBy x s
+
 symbol :: SParser Char
 symbol = oneOf $ toCharArray "!#$%&|*+-/:<=>?@^_~"
 
@@ -105,7 +108,7 @@ readOrThrow parser input = case runParser input parser of
                                 Right val -> return val
 
 readExpr = readOrThrow parseExpr
-readExprList = readOrThrow (endBy parseExpr whiteSpace)
+readExprList = readOrThrow (endByArr parseExpr whiteSpace)
 
 --readExpr :: String -> ThrowsError LispVal
 --readExpr input = case runParser input (whiteSpace >> parseExpr) of

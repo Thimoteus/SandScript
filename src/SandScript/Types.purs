@@ -11,23 +11,22 @@ import Control.Monad.Error.Trans
 import Control.Monad.Eff
 import Control.Monad.Eff.Ref
 import Control.Monad.Eff.Console
+import qualified Control.Monad.Eff.Exception as Exc
 
+import Node.FS
+import Node.FS.Sync
 import Text.Parsing.Parser
 import SandScript.Util
 
-type LispFH = ( ref :: REF, console :: CONSOLE, lispEff :: LispEff )
+type LispFH = ( ref :: REF, console :: CONSOLE, fs :: FS, err :: Exc.EXCEPTION )
 
 type ThrowsError a = Either LispError a
 
 type Env = Ref (Array (Tuple String (Ref LispVal)))
 
 type EffThrowsError a = ErrorT LispError LispF a
--- REff r = Eff ( ref :: REF | r )
--- EffThrowsError r a = ErrorT LispError (REff r) a
--- e = LispError, m = (REff r), a = a
-type LispF = Eff LispFH 
 
-foreign import data LispEff :: !
+type LispF = Eff LispFH
 
 data LispVal = Atom String
              | List (Array LispVal)
@@ -39,6 +38,7 @@ data LispVal = Atom String
              | Func { params :: Array String, varargs :: Maybe String
                     , body :: Array LispVal, closure :: Env }
              | EffFunc (Array LispVal -> EffThrowsError LispVal)
+             | Port FileDescriptor
 
 data LispError = NumArgs Int (Array LispVal)
                | TypeMismatch String LispVal

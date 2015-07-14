@@ -1,0 +1,31 @@
+{
+  "name": "sandscript",
+  "version": "1.0.0",
+  "description": "A lisp-like language that runs on node",
+  "main": "lisp.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "pulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Thimoteus/SandScript.git"
+  },
+  "keywords": [
+    "purescript",
+    "sandscript",
+    "lisp",
+    "javascript"
+  ],
+  "author": "Thimoteus",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/Thimoteus/SandScript/issues"
+  },
+  "homepage": "https://github.com/Thimoteus/SandScript#readme",
+  "dependencies": {
+    "yargs": "^3.15.0"
+  }
+}

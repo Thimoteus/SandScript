@@ -20,12 +20,6 @@ import SandScript.Eval.Primitives
 nullEnv :: LispF Env
 nullEnv = newRef []
 
-primitiveBindings :: LispF Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc PrimitiveFunc) primitives) where
-  --makePrimitiveFunc (Tuple var func) = Tuple var (PrimitiveFunc func)
-  makeFunc constructor (Tuple var func) = Tuple var (constructor func)
---primitives :: Array (Tuple String (Array LispVal -> ThrowsError LispVal))
-
 isBound :: Env -> String -> LispF Boolean
 isBound envRef var = readRef envRef >>= return <<< maybe false (const true) <<< lookup var
 

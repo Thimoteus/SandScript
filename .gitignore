@@ -1,6 +1,7 @@
 .psci*
 bower_components/
 output/
+node_modules
 
 *~
 *.swp

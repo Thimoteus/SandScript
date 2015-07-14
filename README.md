@@ -1,12 +1,16 @@
 # SandScript [![Build Status](https://travis-ci.org/Thimoteus/SandScript.svg?branch=master)](https://travis-ci.org/Thimoteus/SandScript) [![Dependency Status](https://gemnasium.com/Thimoteus/SandScript.svg)](https://gemnasium.com/Thimoteus/SandScript)
 
-A lisp-like language that compiles to JavaScript, written in Purescript (which is written in Haskell).
+A lisp-like language that runs on node, written in Purescript (which is written in Haskell).
 
 # Using
 
-First make sure you have purescript (>= 0.7.0) and pulp (>= 4.0.2) installed.
+First make sure you have purescript (>= 0.7.0) and pulp (>= 4.0.2) installed, as well as node and npm.
 
-Run `pulp dep install`, then `pulp run` to get a REPL.
+Run `pulp dep install` and `npm install`, then `pulp run` to get a REPL.
+
+Alternatively, you can run a file with `pulp run --run filename`.
+
+A precompiled executable is provided in `sandscript.js`, just run it with node.
 
 # Syntax
 
@@ -21,8 +25,6 @@ Defining functions is similar to defining a variable, for an example, see the se
 ## Data types
 
 Primitive types come in four flavors: atoms ('atom), strings ("hello world"), bools (#t, #f) and natural numbers (0, 1, 2, ... ). There are two types of collections, lists and [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp), both of which are heterogeneous.
-
-
 
 # Questions That Might Be Asked Frequently
 
