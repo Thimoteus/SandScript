@@ -1,0 +1,19 @@
+(load "lang/Prelude/Prelude.sand")
+
+;If we list all the natural numbers below 10 that are multiples of 3 or 5, we get 3, 5, 6 and 9. The sum of these multiples is 23.
+;Find the sum of all the multiples of 3 or 5 below 1000.
+
+(def (is-multiple n)
+  (cond
+    ((zero? (mod n 3)) true)
+    ((zero? (mod n 5)) true)
+    (else false)))
+
+(def (f xs)
+  (reduce + 0 (filter is-multiple xs)))
+
+; right now our language will run out of stack if we call it on the full range
+(def x0 (range 3 498))
+(def x1 (range 500 999))
+
+(sum (f x0) (f x1))

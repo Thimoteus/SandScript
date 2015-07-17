@@ -6,14 +6,18 @@ import Data.List (fromList)
 import Data.Identity
 import Data.Maybe
 import Data.String
+import Data.Char (toString)
 import Data.Either
 import Data.Foldable
 import Data.Tuple
 import Data.Array (many, (:))
+import Data.Int (toNumber, even)
+import Math (pow)
 
 import Control.Alt
 import Control.Alternative
 import Control.Lazy
+import Control.Apply ((*>))
 import Control.Monad.Error
 import Control.Monad.Error.Class
 
@@ -69,10 +73,70 @@ parseAtom = do
                 "false" -> Bool false
                 _ -> Atom atom
 
-parseNumber :: SParser LispVal
-parseNumber = do
+parseInt :: SParser LispVal
+parseInt = do
+  minus <- many $ char '~'
   number <- many1 digit
-  return <<< Number <<< str2num $ fromCharArray number
+  if even $ Data.Array.length minus
+     then return <<< Int <<< str2num $ fromCharArray number
+     else return <<< Int <<< negate <<< str2num $ fromCharArray number
+
+parseFloat :: SParser LispVal
+parseFloat = do
+  minus <- many $ char '~'
+  integral <- fromCharArray <$> many1 digit
+  char '.'
+  fractional <- fromCharArray <$> many1 digit
+  if even $ Data.Array.length minus
+     then return <<< Float $ toFloat integral fractional
+     else return <<< Float $ toNegFloat integral fractional
+    where
+    toNegFloat :: String -> String -> Number
+    toNegFloat intg frct = (toNumber <<< negate $ str2num intg) - (decimalize $ str2num frct)
+
+toFloat :: String -> String -> Number
+toFloat intg frct = (toNumber $ str2num intg) + (decimalize $ str2num frct)
+decimalize :: Int -> Number
+decimalize n = (toNumber n) / pow 10.0 (toNumber $ length $ show n)
+
+parseFrac :: SParser LispVal
+parseFrac = do
+  minus <- many $ char '~'
+  numer <- fromCharArray <$> many1 digit
+  char '/'
+  denom <- fromCharArray <$> many1 digit
+  if even $ Data.Array.length minus
+     then return <<< Frac $ str2num numer & str2num denom
+     else return <<< Frac $ (negate $ str2num numer) & str2num denom
+
+parseComplex :: SParser LispVal
+parseComplex = do
+  realMinus <- many $ char '~'
+  realInteg <- fromCharArray <$> many1 digit
+  char '.'
+  realFrac <- fromCharArray <$> many1 digit
+  char '+'
+  imaginaryMinus <- many $ char '~'
+  imaginaryInteg <- fromCharArray <$> many1 digit
+  char '.'
+  imaginaryFrac <- fromCharArray <$> many1 digit
+  char 'i'
+  let rMinus = if even $ Data.Array.length realMinus then 1.0 else -1.0
+      iMinus = if even $ Data.Array.length imaginaryMinus then 1.0 else -1.0
+      real = rMinus * (toNumber (str2num realInteg) + (decimalize $ str2num realFrac))
+      imaginary = iMinus * (toNumber (str2num imaginaryInteg) + (decimalize $ str2num imaginaryFrac))
+  return $ Complex { real: real, imaginary: imaginary }
+
+parseComment :: SParser (Data.List.List Char)
+parseComment = do
+  char ';'
+  many1Till anyChar (char '\n')
+
+skipComment :: SParser Unit
+skipComment = do
+  parseComment
+  optional eof
+  return unit
 
 parseList :: SParser LispVal -> SParser LispVal
 parseList pars = do
@@ -82,7 +146,7 @@ parseList pars = do
 parseDottedList :: SParser LispVal -> SParser LispVal
 parseDottedList pars = do
   head <- pars `endBy` whiteSpace
-  tail <- string "." >> whiteSpace >> pars
+  tail <- char '.' *> whiteSpace *> pars
   return $ DottedList (fromList head) tail
 
 parseQuoted :: SParser LispVal -> SParser LispVal
@@ -93,9 +157,12 @@ parseQuoted pars = do
 
 parseExpr :: SParser LispVal
 parseExpr = fix $ \ p -> (parseString
+                     <|> (try parseComplex <|> try parseFloat <|> try parseFrac <|> try parseInt)
                      <|> parseAtom
-                     <|> parseNumber
                      <|> (parseQuoted p)
+                     <|> (do
+                         skipComment
+                         return $ String "")
                      <|> (do
                          string "("
                          x <- try (parseList p) <|> (parseDottedList p)
@@ -109,8 +176,3 @@ readOrThrow parser input = case runParser input parser of
 
 readExpr = readOrThrow parseExpr
 readExprList = readOrThrow (endByArr parseExpr whiteSpace)
-
---readExpr :: String -> ThrowsError LispVal
---readExpr input = case runParser input (whiteSpace >> parseExpr) of
-                      --Left err -> throwError $ Parserr err
-                      --Right val -> return val

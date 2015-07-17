@@ -15,9 +15,6 @@ import qualified Data.String as S
 import Control.Alternative
 import Text.Parsing.Parser
 
-(>>) :: forall m a b. (Monad m) => m a -> m b -> m b
-(>>) f g = f >>= \ _ -> g
-
 toChars :: String -> Array String
 toChars = S.split ""
 
@@ -42,6 +39,11 @@ uncons2 xs
 (&) :: forall a b. a -> b -> Tuple a b
 (&) = Tuple
 infixr 0 &
+
+absInt :: Int -> Int
+absInt n
+  | n < 0 = -n
+  | otherwise = n
 
 foreign import str2num :: String -> Int
 

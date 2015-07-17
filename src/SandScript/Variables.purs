@@ -7,6 +7,7 @@ import Data.Tuple
 import Data.Array hiding (cons)
 import Data.Traversable
 
+import Control.Apply ((*>))
 import Control.Monad.Eff
 import Control.Monad.Eff.Ref
 import Control.Monad.Eff.Class
@@ -42,7 +43,7 @@ defineVar :: Env -> String -> LispVal -> EffThrowsError LispVal
 defineVar envRef var value = do
   alreadyDefined <- liftEff $ isBound envRef var
   if alreadyDefined
-    then setVar envRef var value >> return value
+    then setVar envRef var value *> return value
     else do
       valueRef <- liftEff $ newRef value
       env <- liftEff $ readRef envRef

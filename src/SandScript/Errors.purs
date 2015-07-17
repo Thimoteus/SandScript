@@ -26,16 +26,3 @@ runEffThrows action = runErrorT (trapError' action) >>= return <<< extractValue
 
 errorT :: forall e m a b. (Functor m) => (e -> b) -> (a -> b) -> ErrorT e m a -> m b
 errorT onErr onSucc errT = either onErr onSucc <$> runErrorT errT
-
-
-{--
-
-runErrorT :: ErrorT e m a -> m (Either e a)
-trapError :: m String -> m String
-extractValue :: ThrowsError a -> a
-ThrowsError a = Either LispError a
-
-action :: EffThrowsError r String :: ErrorT LispError (REff r) String
-
-catchError :: MonadError e m => m a -> (e -> m a) -> m a
---}

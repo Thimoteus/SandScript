@@ -10,7 +10,13 @@ Run `pulp dep install` and `npm install`, then `pulp run` to get a REPL.
 
 Alternatively, you can run a file with `pulp run --run filename`.
 
-A precompiled executable is provided in `sandscript.js`, just run it with node.
+## Building the interpreter
+
+```bash
+pulp build --optimise --to sandscript.js
+sed -i '1s/^/#!\/usr\/bin\/env node\n/' sandscript.js
+chmod +x sandscript.js
+```
 
 # Syntax
 
@@ -18,38 +24,24 @@ Everything is an [S-expression](https://en.wikipedia.org/wiki/S-expression). [Qu
 
 Defining variables is done with `def`, and bound variables can be rebound with `set`.
 
-Defining functions is similar to defining a variable, for an example, see the section on rational number arithmetic below.
+Defining functions is similar to defining a variable, for an example, see the `lang/Examples` folder.
+
+## Highlighting
+
+SandScript shares many names with Clojure, so setting your favorite text editor to highlight SandScript files as Clojure may provide a better experience.
 
 # Semantics
 
 ## Data types
 
-Primitive types come in four flavors: atoms ('atom), strings ("hello world"), bools (#t, #f) and natural numbers (0, 1, 2, ... ). There are two types of collections, lists and [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp), both of which are heterogeneous.
+Primitive types come in the following flavors:
 
-# Questions That Might Be Asked Frequently
+1. Atoms => 'atom
+2. Strings => "hello world"
+3. Bools => true, false
+4. Ints => 2, ~2
+5. Floats => 3.14, ~3.14
+6. Fracs => 2/3, ~2/3
+7. Complex => 1.0+0.0i, ~0.5+~3.14i
 
-### Why is there no support for integers?
-
-You can get integers, but for those smaller than 0 you'll need to write `(- 0 n)` instead of `-n`. For example:
-```
-> (- 0 2)
--2
-```
-
-### What about rationals?
-
-Rationals are just pairs of integers. If you want to use them you'll have to define arithmetic operators according to the axioms of a [field](https://en.wikipedia.org/wiki/Field_%28mathematics%29#First_example:_rational_numbers). 
-
-For example:
-
-```clojure
-(def (plus x1 y1 x2 y2) (cons (+ (* x1 y2) (* x2 y1)) (* y1 y2)))
-(def (times x1 y1 x2 y2) (cons (* x1 x2) (* y1 y2)))
-(def (neg x y) (cons (- 0 x) y))
-```
-
-etc.
-
-### Are you planning on adding these features in the future?
-
-No. I'm sure someone out there has written "Syntactic sugar considered harmful" so refer to that, if it exists.
+There are two types of collections: arrays and [dotted arrays](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp), both of which are heterogeneous.

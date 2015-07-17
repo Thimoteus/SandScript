@@ -1,0 +1,88 @@
+; this is a comment
+(def (not x) (if x false true))
+(def (nil? obj) (if (eqv? obj '()) true false))
+(def (list . objs) objs)
+
+; every functional programmer should have these
+(def (id x) x)
+(def (flip func) (lambda (arg1 arg2) (func arg2 arg1)))
+(def (partial func arg1) (lambda (arg) (apply func (cons arg1 (list arg)))))
+(def (comp f g) (lambda (arg) (f (apply g arg))))
+
+; let's get mathematical
+(def zero? (partial = 0))
+(def pos? (partial < 0))
+(def neg? (partial > 0))
+(def (odd? num) (= (mod num 2) 1))
+(def (even? num) (= (mod num 2) 0))
+
+; staples
+(def (foldr func end lst)
+  (if (nil? lst)
+    end
+    (func (head lst) (foldr func end (tail lst)))))
+(def (foldl func accum lst)
+  (if (nil? lst)
+    accum
+    (foldl func (func accum (head lst)) (tail lst))))
+(def (unfold func init pred)
+  (if (pred init)
+    (cons init '())
+    (cons init (unfold func (func init) pred))))
+(def reduce foldr)
+(def fold foldl)
+(def (map func lst) (reduce (lambda (x y) (cons (func x) y)) '() lst))
+(def (filter pred lst) (reduce (lambda (x y) (if (pred x) (cons x y) y)) '() lst))
+
+(def (sum . lst) (fold + 0 lst))
+(def (prod . lst) (fold * 1 lst))
+(def (and . lst) (fold && true lst))
+(def (or . lst) (fold || false lst))
+
+(def (max first . rest) (fold (lambda (old new) (if (> old new) old new)) first rest))
+(def (min first . rest) (fold (lambda (old new) (if (< old new) old new)) first rest))
+
+(def (count lst) (fold (lambda (acc curr) (+ acc 1)) 0 lst))
+(def (reverse lst) (fold (flip cons) '() lst))
+
+; member and assoc
+(def (mem-helper pred op) (lambda (acc next) (if (and (not acc) (pred (op next))) next acc)))
+(def (memq obj lst) (fold (mem-helper (partial eq? obj) id) false lst))
+(def (memv obj lst) (fold (mem-helper (partial eqv? obj) id) false lst))
+(def (assq obj alist) (fold (mem-helper (partial eq? obj) head) false alist))
+(def (assv obj alist) (fold (mem-helper (partial eqv? obj) head) false alist))
+
+; list stuff
+(def nil '())
+(def (ind i lst) (indH i lst 0))
+(def (indH i lst cur)
+  (cond
+    ((nil? lst) '())
+    ((= i cur) (head lst))
+    (else (indH i (tail lst) (inc cur)))))
+
+(def (range start end)
+  (unfold inc start
+          (lambda (n) (if (= n end) true false))))
+
+(def (last lst) (head (reverse lst)))
+
+; TODO: write flatten
+
+;(def (take n lst)
+  ;(cond
+    ;((nil? lst) nil)))
+
+
+; math library
+(def (neg x) (- 0 x))
+(def (inc n) (+ n 1))
+(def (dec n) (- n 1))
+
+(def (divides m n)
+  (if (= 0 (mod n m))
+    true
+    false))
+
+"Prelude loaded."
+
