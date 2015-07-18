@@ -1,10 +1,15 @@
 ; this is a comment
+; Bool -> Bool
 (def (not x) (if x false true))
+; a -> Bool
 (def (nil? obj) (if (eqv? obj '()) true false))
+; a -> b -> c -> ... -> (a,b,c...)
 (def (list . objs) objs)
 
 ; every functional programmer should have these
+; a -> a
 (def (id x) x)
+; (a -> b -> c) -> b -> a -> c
 (def (flip func) (lambda (arg1 arg2) (func arg2 arg1)))
 (def (partial func arg1) (lambda (arg) (apply func (cons arg1 (list arg)))))
 (def (comp f g) (lambda (arg) (f (apply g arg))))
@@ -68,11 +73,6 @@
 (def (last lst) (head (reverse lst)))
 
 ; TODO: write flatten
-
-;(def (take n lst)
-  ;(cond
-    ;((nil? lst) nil)))
-
 
 ; math library
 (def (neg x) (- 0 x))

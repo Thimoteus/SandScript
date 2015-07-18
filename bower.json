@@ -17,6 +17,7 @@
     "purescript-refs": "~0.2.0",
     "purescript-node-fs": "~0.7.1",
     "purescript-console": "~0.1.0",
-    "purescript-yargs": "~0.6.0"
+    "purescript-yargs": "~0.6.0",
+    "purescript-math": "~0.2.0"
   }
 }
