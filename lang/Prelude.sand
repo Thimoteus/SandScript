@@ -80,7 +80,7 @@
 (def (dec n) (- n 1))
 
 (def (divides m n)
-  (if (= 0 (mod n m))
+  (if (zero? (mod n m))
     true
     false))
 
