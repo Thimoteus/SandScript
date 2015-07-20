@@ -2,8 +2,8 @@ module SandScript.Util where
 
 import Prelude
 
-import Data.Array.Unsafe (head, tail, unsafeIndex)
-import Data.Array (length, drop)
+import Data.List.Unsafe (head, tail)
+import Data.List hiding (head, tail)
 import Data.Foreign
 import Data.Foreign.Class
 import Data.Foldable
@@ -15,36 +15,46 @@ import qualified Data.String as S
 import Control.Alternative
 import Text.Parsing.Parser
 
-toChars :: String -> Array String
-toChars = S.split ""
+toChars :: String -> List String
+toChars = toList <<< S.split ""
 
 unChars :: Array String -> String
 unChars = foldr (++) ""
 
-unwordsList :: forall a. (Show a) => Array a -> String
-unwordsList = unwords <<< (map show)
+unwordsList :: forall a. (Show a) => List a -> String
+unwordsList = unwords <<< map show
 
-foldl1 :: forall a. (a -> a -> a) -> Array a -> a
+unwordsArray :: forall a. (Show a) => Array a -> String
+unwordsArray = unwordsArr <<< map show
+
+foldl1 :: forall a. (a -> a -> a) -> List a -> a
 foldl1 f xs = foldl f (head xs) (tail xs)
 
 readNum :: String -> Maybe Int
 readNum s | s == show (str2num s) = Just $ str2num s
           | otherwise = Nothing
 
-uncons2 :: forall a. Array a -> Maybe { first :: a, second :: a, rest :: Array a }
-uncons2 xs
-  | length xs < 3 = Nothing
-  | otherwise = Just { first: xs `unsafeIndex` 0, second: xs `unsafeIndex` 1, rest: drop 2 xs }
-
 (&) :: forall a b. a -> b -> Tuple a b
 (&) = Tuple
-infixr 0 &
+infixr 7 &
 
 absInt :: Int -> Int
 absInt n
   | n < 0 = -n
   | otherwise = n
 
+showList :: forall a. (Show a) => List a -> String
+showList Nil = "()"
+showList lst = "(" ++ go lst ++ ")"
+  where
+  go Nil = ""
+  go (Cons x Nil) = show x
+  go (Cons x xs) = show x ++ ", " ++ go xs
+
+
 foreign import str2num :: String -> Int
 
-foreign import unwords :: Array String -> String
+foreign import unwordsArr :: Array String -> String
+
+unwords :: List String -> String
+unwords = unwordsArr <<< fromList

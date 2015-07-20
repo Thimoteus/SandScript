@@ -1,8 +1,9 @@
 module SandScript.Parser where
 
 import Prelude
+import Math (pow)
 
-import Data.List (fromList)
+import Data.List (fromList, many, (:), List(..))
 import Data.Identity
 import Data.Maybe
 import Data.String
@@ -10,9 +11,9 @@ import Data.Char (toString)
 import Data.Either
 import Data.Foldable
 import Data.Tuple
-import Data.Array (many, (:))
 import Data.Int (toNumber, even)
-import Math (pow)
+import qualified Data.Array as A
+import qualified Data.Char as C
 
 import Control.Alt
 import Control.Alternative
@@ -32,14 +33,11 @@ import SandScript.Util
 
 type SParser a = Parser String a
 
-many1 :: forall a. Parser String a -> Parser String (Array a)
+many1 :: forall a. Parser String a -> Parser String (List a)
 many1 par = do
   x <- par
   xs <- many par
   return (x:xs)
-
-endByArr :: forall a sep. SParser a -> SParser sep -> SParser (Array a)
-endByArr x s = fromList <$> endBy x s
 
 symbol :: SParser Char
 symbol = oneOf $ toCharArray "!#$%&|*+-/:<=>?@^_~"
@@ -61,13 +59,13 @@ parseString = do
   char '"'
   x <- many (noneOf ['"', '\\'] <|> escapedChars)
   char '"'
-  return $ String (fromCharArray x)
+  return $ String (foldMap C.toString x)
 
 parseAtom :: SParser LispVal
 parseAtom = do
   first <- letter <|> symbol
   rest <- many $ letter <|> symbol <|> digit
-  let atom = fromCharArray $ first:rest
+  let atom = foldMap C.toString $ first:rest
   return $ case atom of
                 "true" -> Bool true
                 "false" -> Bool false
@@ -77,17 +75,17 @@ parseInt :: SParser LispVal
 parseInt = do
   minus <- many $ char '~'
   number <- many1 digit
-  if even $ Data.Array.length minus
-     then return <<< Int <<< str2num $ fromCharArray number
-     else return <<< Int <<< negate <<< str2num $ fromCharArray number
+  if even $ Data.List.length minus
+     then return <<< Int <<< str2num $ foldMap C.toString number
+     else return <<< Int <<< negate <<< str2num $ foldMap C.toString number
 
 parseFloat :: SParser LispVal
 parseFloat = do
   minus <- many $ char '~'
-  integral <- fromCharArray <$> many1 digit
+  integral <- foldMap C.toString <$> many1 digit
   char '.'
-  fractional <- fromCharArray <$> many1 digit
-  if even $ Data.Array.length minus
+  fractional <- foldMap C.toString <$> many1 digit
+  if even $ Data.List.length minus
      then return <<< Float $ toFloat integral fractional
      else return <<< Float $ toNegFloat integral fractional
     where
@@ -99,30 +97,32 @@ toFloat intg frct = (toNumber $ str2num intg) + (decimalize $ str2num frct)
 decimalize :: Int -> Number
 decimalize n = (toNumber n) / pow 10.0 (toNumber $ length $ show n)
 
+-- many :: f a -> f (List a)
+-- char :: Char -> SParser Char
 parseFrac :: SParser LispVal
 parseFrac = do
   minus <- many $ char '~'
-  numer <- fromCharArray <$> many1 digit
+  numer <- foldMap C.toString <$> many1 digit
   char '/'
-  denom <- fromCharArray <$> many1 digit
-  if even $ Data.Array.length minus
+  denom <- foldMap C.toString <$> many1 digit
+  if even $ Data.List.length minus
      then return <<< Frac $ str2num numer & str2num denom
      else return <<< Frac $ (negate $ str2num numer) & str2num denom
 
 parseComplex :: SParser LispVal
 parseComplex = do
   realMinus <- many $ char '~'
-  realInteg <- fromCharArray <$> many1 digit
+  realInteg <- foldMap C.toString <$> many1 digit
   char '.'
-  realFrac <- fromCharArray <$> many1 digit
+  realFrac <- foldMap C.toString <$> many1 digit
   char '+'
   imaginaryMinus <- many $ char '~'
-  imaginaryInteg <- fromCharArray <$> many1 digit
+  imaginaryInteg <- foldMap C.toString <$> many1 digit
   char '.'
-  imaginaryFrac <- fromCharArray <$> many1 digit
+  imaginaryFrac <- foldMap C.toString <$> many1 digit
   char 'i'
-  let rMinus = if even $ Data.Array.length realMinus then 1.0 else -1.0
-      iMinus = if even $ Data.Array.length imaginaryMinus then 1.0 else -1.0
+  let rMinus = if even $ Data.List.length realMinus then 1.0 else -1.0
+      iMinus = if even $ Data.List.length imaginaryMinus then 1.0 else -1.0
       real = rMinus * (toNumber (str2num realInteg) + (decimalize $ str2num realFrac))
       imaginary = iMinus * (toNumber (str2num imaginaryInteg) + (decimalize $ str2num imaginaryFrac))
   return $ Complex { real: real, imaginary: imaginary }
@@ -153,7 +153,7 @@ parseQuoted :: SParser LispVal -> SParser LispVal
 parseQuoted pars = do
   string "'"
   x <- pars
-  return $ List [Atom "quote", x]
+  return $ List $ (Atom "quote") : x : Nil
 
 parseExpr :: SParser LispVal
 parseExpr = fix $ \ p -> (parseString
@@ -175,4 +175,4 @@ readOrThrow parser input = case runParser input parser of
                                 Right val -> return val
 
 readExpr = readOrThrow parseExpr
-readExprList = readOrThrow (endByArr parseExpr whiteSpace)
+readExprList = readOrThrow (endBy parseExpr whiteSpace)

@@ -7,67 +7,69 @@ import Data.Either
 import Data.Maybe
 import Data.Foldable
 import Data.Traversable
-import Data.Array hiding (cons)
-import qualified Data.Array.Unsafe as U
+import Data.List
+import qualified Data.List.Unsafe as U
 import qualified Data.String as S
+import qualified Data.Char as C
 
 import Control.Monad.Error.Class
 
 import SandScript.Types
 import SandScript.Util
 
-primitives :: Array (Tuple String (Array LispVal -> ThrowsError LispVal))
-primitives = [ "+" & overloadedPlus
-             , "-" & overloadedMinus
-             , "*" & overloadedTimes
-             , "/" & overloadedDiv
-             , "mod" & overloadedMod
-             , "int?" & intChecker
-             , "frac?" & fracChecker
-             , "float?" & floatChecker
-             , "complex?" & complexChecker
-             , "number?" & numberChecker
-             , "symbol?" & symbolChecker
-             , "string?" & stringChecker
-             , "bool?" & boolChecker
-             -- N -> 2
-             , "=" & numBoolBinop (==)
-             , "<" & numBoolBinop (<)
-             , "<" & numBoolBinop (<)
-             , ">" & numBoolBinop (>)
-             , "!=" & numBoolBinop (/=)
-             , ">=" & numBoolBinop (>=)
-             , "<=" & numBoolBinop (<=)
-             -- 2 -> 2
-             , "&&" & boolBoolBinop (&&)
-             , "||" & boolBoolBinop (||)
-             --, Tuple "not" boolNot
-             -- String -> 2
-             , "string=?" & strBoolBinop (==)
-             , "string<?" & strBoolBinop (<)
-             , "string>?" & strBoolBinop (>)
-             , "string=?" & strBoolBinop (>=)
-             , "string<=?" & strBoolBinop (<=)
-             , "string>=?" & strBoolBinop (>=)
-             -- String -> Something
-             , "make-string" & makeStr
-             , "string-length" & strLength
-             , "string-ref" & strRef
-             , "substring" & substr
-             , "string-append" & strAppend
-             , "string->list" & str2list
-             , "list->string" & list2str
-             -- list operators
-             , "head" & car
-             , "tail" & cdr
-             , "cons" & cons
-             , "ind" & ind
-             -- equality checking
-             , "eq?" & eqv
-             , "eqv?" & eqv
-             -- String -> String
-             , "symbol->string" & sym2str
-             , "string->symbol" & str2sym ]
+primitives :: List (Tuple String (List LispVal -> ThrowsError LispVal))
+primitives = "+" & overloadedPlus
+           : "-" & overloadedMinus
+           : "*" & overloadedTimes
+           : "/" & overloadedDiv
+           : "mod" & overloadedMod
+           : "int?" & intChecker
+           : "frac?" & fracChecker
+           : "float?" & floatChecker
+           : "complex?" & complexChecker
+           : "number?" & numberChecker
+           : "symbol?" & symbolChecker
+           : "string?" & stringChecker
+           : "bool?" & boolChecker
+           -- N -> 2
+           : "=" & numBoolBinop (==)
+           : "<" & numBoolBinop (<)
+           : "<" & numBoolBinop (<)
+           : ">" & numBoolBinop (>)
+           : "!=" & numBoolBinop (/=)
+           : ">=" & numBoolBinop (>=)
+           : "<=" & numBoolBinop (<=)
+           -- 2 -> 2
+           : "&&" & boolBoolBinop (&&)
+           : "||" & boolBoolBinop (||)
+           --, Tuple "not" boolNot
+           -- String -> 2
+           : "string=?" & strBoolBinop (==)
+           : "string<?" & strBoolBinop (<)
+           : "string>?" & strBoolBinop (>)
+           : "string=?" & strBoolBinop (>=)
+           : "string<=?" & strBoolBinop (<=)
+           : "string>=?" & strBoolBinop (>=)
+           -- String -> Something
+           : "make-string" & makeStr
+           : "string-length" & strLength
+           : "string-ref" & strRef
+           : "substring" & substr
+           : "string-append" & strAppend
+           : "string->list" & str2list
+           : "list->string" & list2str
+           -- list operators
+           : "head" & car
+           : "tail" & cdr
+           : "cons" & cons
+           : "ind" & ind
+           -- equality checking
+           : "eq?" & eqv
+           : "eqv?" & eqv
+           -- String -> String
+           : "symbol->string" & sym2str
+           : "string->symbol" & str2sym
+           : Nil
 
 fracArith :: Op -> Tuple Int Int -> Tuple Int Int -> Tuple Int Int
 fracArith Add (Tuple a b) (Tuple c d) = (a*d + b*c) & (b * d)
@@ -81,7 +83,7 @@ imagArith Sub (Tuple x1 y1) (Tuple x2 y2) = (x1 - x2) & (y1 - y2)
 imagArith Mul (Tuple x1 y1) (Tuple x2 y2) = (x1*x2 - y1*y2) & (y1*x2 + x1*y2)
 imagArith Div (Tuple x1 y1) (Tuple x2 y2) = ((x1*x2 + y1*y2)/(x2*x2 + y2*y2)) & ((y1*x2 - x1*y2)/(x2*x2 + y2*y2))
 
-overloadedPlus :: Array LispVal -> ThrowsError LispVal
+overloadedPlus :: List LispVal -> ThrowsError LispVal
 overloadedPlus args
   | all isInt args = do
     xs <- traverse unpackInt args
@@ -98,7 +100,7 @@ overloadedPlus args
     return $ Complex { real: fst sum, imaginary: snd sum }
   | otherwise = throwError $ TypeMismatch "same type of number" (List args)
 
-overloadedMinus :: Array LispVal -> ThrowsError LispVal
+overloadedMinus :: List LispVal -> ThrowsError LispVal
 overloadedMinus args
   | all isInt args = do
     xs <- traverse unpackInt args
@@ -115,7 +117,7 @@ overloadedMinus args
     return $ Complex { real: fst sum, imaginary: snd sum }
   | otherwise = throwError $ TypeMismatch "same type of number" (List args)
 
-overloadedTimes :: Array LispVal -> ThrowsError LispVal
+overloadedTimes :: List LispVal -> ThrowsError LispVal
 overloadedTimes args
   | all isInt args = do
     xs <- traverse unpackInt args
@@ -132,7 +134,7 @@ overloadedTimes args
     return $ Complex { real: fst prod, imaginary: snd prod }
   | otherwise = throwError $ TypeMismatch "same type of number" (List args)
 
-overloadedDiv :: Array LispVal -> ThrowsError LispVal
+overloadedDiv :: List LispVal -> ThrowsError LispVal
 overloadedDiv args
   | all isInt args = do
     xs <- traverse unpackInt args
@@ -149,7 +151,7 @@ overloadedDiv args
     return $ Complex { real: fst divd, imaginary: snd divd }
   | otherwise = throwError $ TypeMismatch "same type of number" (List args)
 
-overloadedMod :: Array LispVal -> ThrowsError LispVal
+overloadedMod :: List LispVal -> ThrowsError LispVal
 overloadedMod args
   | all isInt args = do
     xs <- traverse unpackInt args
@@ -172,12 +174,12 @@ unpackComplex :: LispVal -> ThrowsError (Tuple Number Number)
 unpackComplex (Complex z) = return $ z.real & z.imaginary
 unpackComplex notComplex = throwError $ TypeMismatch "complex" notComplex
 
-boolBinop :: forall a. (LispVal -> ThrowsError a) -> (a -> a -> Boolean) -> Array LispVal -> ThrowsError LispVal
+boolBinop :: forall a. (LispVal -> ThrowsError a) -> (a -> a -> Boolean) -> List LispVal -> ThrowsError LispVal
 boolBinop unpacker op args = if length args /= 2
                              then throwError $ NumArgs 2 args
                              else do
-                               left <- unpacker $ args `U.unsafeIndex` 0
-                               right <- unpacker $ args `U.unsafeIndex` 1
+                               left <- unpacker $ U.head args
+                               right <- unpacker $ U.head $ U.tail args
                                return $ Bool $ left `op` right
 
 unpackStr :: LispVal -> ThrowsError String
@@ -192,160 +194,149 @@ numBoolBinop = boolBinop unpackInt
 boolBoolBinop = boolBinop unpackBool
 strBoolBinop = boolBinop unpackStr
 
-symbolChecker :: Array LispVal -> ThrowsError LispVal
-symbolChecker [Atom _] = return $ Bool true
+symbolChecker :: List LispVal -> ThrowsError LispVal
+symbolChecker (Cons (Atom _) Nil) = return $ Bool true
 symbolChecker _ = return $ Bool false
 
-stringChecker :: Array LispVal -> ThrowsError LispVal
-stringChecker [String _] = return $ Bool true
+stringChecker :: List LispVal -> ThrowsError LispVal
+stringChecker (Cons (String _) Nil) = return $ Bool true
 stringChecker _ = return $ Bool false
 
-intChecker :: Array LispVal -> ThrowsError LispVal
-intChecker [Int _] = return $ Bool true
+intChecker :: List LispVal -> ThrowsError LispVal
+intChecker (Cons (Int _) Nil) = return $ Bool true
 intChecker _ = return $ Bool false
 
-floatChecker :: Array LispVal -> ThrowsError LispVal
-floatChecker [Float _] = return $ Bool true
+floatChecker :: List LispVal -> ThrowsError LispVal
+floatChecker (Cons (Float _) Nil) = return $ Bool true
 floatChecker _ = return $ Bool false
 
-fracChecker :: Array LispVal -> ThrowsError LispVal
-fracChecker [Frac _] = return $ Bool true
+fracChecker :: List LispVal -> ThrowsError LispVal
+fracChecker (Cons (Frac _) Nil) = return $ Bool true
 fracChecker _ = return $ Bool false
 
-complexChecker :: Array LispVal -> ThrowsError LispVal
-complexChecker [Complex _] = return $ Bool true
+complexChecker :: List LispVal -> ThrowsError LispVal
+complexChecker (Cons (Complex _) Nil) = return $ Bool true
 complexChecker _ = return $ Bool false
 
-numberChecker :: Array LispVal -> ThrowsError LispVal
+numberChecker :: List LispVal -> ThrowsError LispVal
 numberChecker val = return $ Bool $ any isTrue $ map ($ val) [intChecker, floatChecker, fracChecker, complexChecker]
   where
   isTrue :: ThrowsError LispVal -> Boolean
   isTrue (Right (Bool b)) = b
   isTrue _ = false
 
-boolChecker :: Array LispVal -> ThrowsError LispVal
-boolChecker [Bool _] = return $ Bool true
+boolChecker :: List LispVal -> ThrowsError LispVal
+boolChecker (Cons (Bool _) Nil) = return $ Bool true
 boolChecker _ = return $ Bool false
 
-sym2str :: Array LispVal -> ThrowsError LispVal
-sym2str [Atom n] = return $ String $ show n
-sym2str [v] = throwError $ TypeMismatch "symbol" v
+sym2str :: List LispVal -> ThrowsError LispVal
+sym2str (Cons (Atom n) Nil) = return $ String $ show n
+sym2str (Cons v Nil) = throwError $ TypeMismatch "symbol" v
 sym2str vs = throwError $ NumArgs 1 vs
 
-str2sym :: Array LispVal -> ThrowsError LispVal
-str2sym [String s] = return $ Atom s
-str2sym [v] = throwError $ TypeMismatch "string" v
+str2sym :: List LispVal -> ThrowsError LispVal
+str2sym (Cons (String s) Nil) = return $ Atom s
+str2sym (Cons v Nil) = throwError $ TypeMismatch "string" v
 str2sym vs = throwError $ NumArgs 1 vs
 
 -- Bool stuff
 
---boolNot :: Array LispVal -> ThrowsError LispVal
+--boolNot :: List LispVal -> ThrowsError LispVal
 --boolNot [Bool b] = return $ Bool (not b)
 --boolNot [notBool] = throwError $ TypeMismatch "bool" notBool
 --boolNot badArgs = throwError $ NumArgs 1 badArgs
 
 -- List primitives
-car :: Array LispVal -> ThrowsError LispVal
-car [List xs] = case head xs of
-                     Just x -> return x
-                     Nothing -> throwError $ NumArgs 1 []
-car [DottedList xs _] = case head xs of
-                             Just x -> return x
-                             Nothing -> throwError $ NumArgs 1 []
-car [badArg] = throwError $ TypeMismatch "pair" badArg
+car :: List LispVal -> ThrowsError LispVal
+car (Cons (List (Cons x xs)) Nil) = return x
+car (Cons (DottedList (Cons x xs) _) Nil) = return x
+car (Cons badArg Nil) = throwError $ TypeMismatch "pair" badArg
 car badArgList = throwError $ NumArgs 1 badArgList
 
-cdr :: Array LispVal -> ThrowsError LispVal
-cdr [List xs] = case tail xs of
-                     Just xss -> return $ List xss
-                     Nothing -> throwError $ NumArgs 1 []
-cdr [DottedList xs x] = case tail xs of
-                             Just [singleton] -> return x
-                             Just xss -> return $ DottedList xss x
-                             Nothing -> throwError $ NumArgs 1 []
-cdr [badArg] = throwError $ TypeMismatch "pair" badArg
+cdr :: List LispVal -> ThrowsError LispVal
+cdr (Cons (List (Cons _ xs)) Nil) = return $ List xs
+cdr (Cons (DottedList (Cons _ Nil) x) Nil) = return x
+cdr (Cons (DottedList (Cons _ xs) x) Nil) = return $ DottedList xs x
+cdr (Cons (badArg) Nil) = throwError $ TypeMismatch "pair" badArg
 cdr badArgList = throwError $ NumArgs 1 badArgList
 
-cons :: Array LispVal -> ThrowsError LispVal
-cons [x, List []] = return $ List [x]
-cons [x, List xs] = return $ List (x:xs)
-cons [x, DottedList xs xf] = return $ DottedList (x:xs) xf
-cons [x1, x2] = return $ DottedList [x1] x2
+cons :: List LispVal -> ThrowsError LispVal
+cons (Cons x (Cons (List Nil) Nil)) = return $ List $ singleton x
+cons (Cons x (Cons (List xs) Nil)) = return $ List (x:xs)
+cons (Cons x (Cons (DottedList xs xf) Nil)) = return $ DottedList (x:xs) xf
+cons (Cons x1 (Cons x2 Nil)) = return $ DottedList (singleton x1) x2
 cons badArgList = throwError $ NumArgs 2 badArgList
 
-ind :: Array LispVal -> ThrowsError LispVal
-ind [Int i, List xs] = maybe (return $ List [])
-                                (\ b -> return b)
-                                (xs !! i)
-ind [notInt, List _] = throwError $ TypeMismatch "int" notInt
-ind [Int _, notList] = throwError $ TypeMismatch "list" notList
+ind :: List LispVal -> ThrowsError LispVal
+ind (Cons (Int i) (Cons (List xs) Nil)) = maybe (return $ List Nil)
+                                                (\ b -> return b)
+                                                (xs !! i)
+ind (Cons notInt (Cons (List _) Nil)) = throwError $ TypeMismatch "int" notInt
+ind (Cons (Int _) (Cons notList Nil)) = throwError $ TypeMismatch "list" notList
 ind badArgs = throwError $ NumArgs 2 badArgs
 
 -- equality
 
-eqv :: Array LispVal -> ThrowsError LispVal
-eqv [Bool b, Bool b'] = return $ Bool (b == b')
-eqv [Int m, Int n] = return $ Bool (m == n)
-eqv [p@(Frac _), q@(Frac _)] = return $ Bool (simplifyFrac p == simplifyFrac q)
-eqv [Float m, Float n] = return $ Bool (m == n)
-eqv [Complex z1, Complex z2] = return $ Bool (z1.real == z2.real && z1.imaginary == z2.imaginary)
-eqv [String s, String s'] = return $ Bool (s == s')
-eqv [Atom p, Atom q] = return $ Bool (p == q)
-eqv [DottedList xs x, DottedList ys y] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
-eqv [List xs, List ys] = return $ Bool $ (length xs == length ys) && (all eqPair $ zip xs ys) where
+eqv :: List LispVal -> ThrowsError LispVal
+eqv (Cons (Bool b) (Cons (Bool b') Nil)) = return $ Bool (b == b')
+eqv (Cons (Int m) (Cons (Int n) Nil)) = return $ Bool (m == n)
+eqv (Cons p@(Frac _) (Cons q@(Frac _) Nil)) = return $ Bool (simplifyFrac p == simplifyFrac q)
+eqv (Cons (Float m) (Cons (Float n) Nil)) = return $ Bool (m == n)
+eqv (Cons (Complex z1) (Cons (Complex z2) Nil)) = return $ Bool (z1.real == z2.real && z1.imaginary == z2.imaginary)
+eqv (Cons (String s) (Cons (String s') Nil)) = return $ Bool (s == s')
+eqv (Cons (Atom p) (Cons (Atom q) Nil)) = return $ Bool (p == q)
+eqv (Cons (DottedList xs x) (Cons (DottedList ys y) Nil)) = eqv ((List $ snoc xs x) : (List $ snoc ys y) : Nil)
+eqv (Cons (List xs) (Cons (List ys) Nil)) = return $ Bool $ (length xs == length ys) && (all eqPair $ zip xs ys) where
   eqPair :: Tuple LispVal LispVal -> Boolean
-  eqPair (Tuple v v') = case eqv [v, v'] of
+  eqPair (Tuple v v') = case eqv (v : v' : Nil) of
                              Left _ -> false
-                             Right (Bool val) -> val
-eqv [_, _] = return $ Bool false
+                             Right (Bool v) -> v
+eqv (Cons _ (Cons _ Nil)) = return $ Bool false
 eqv badArgList = throwError $ NumArgs 2 badArgList
 
 -- string stuff
-makeStr :: Array LispVal -> ThrowsError LispVal
-makeStr [Int n, String c] = case S.toChar c of
-                                    Just chr -> return $ String <<< S.fromCharArray $ replicate n chr
-                                    Nothing -> throwError $ BadSpecialForm "Expected singleton string, found" (String c)
-makeStr [notInt, String _] = throwError $ TypeMismatch "int" notInt
-makeStr [Int _, notString] = throwError $ TypeMismatch "string" notString
-makeStr [x, y] = throwError $ BadSpecialForm "Incorrect `make-string` syntax" $ List [x, y]
+makeStr :: List LispVal -> ThrowsError LispVal
+makeStr (Cons (Int n) (Cons (String c) Nil)) = case S.toChar c of
+                                                    Just chr -> return $ String $ foldMap C.toString (replicate n chr)
+                                                    Nothing -> throwError $ BadSpecialForm "Expected singleton string, found" (String c)
+makeStr (Cons (notInt) (Cons (String _) Nil)) = throwError $ TypeMismatch "int" notInt
+makeStr (Cons (Int _) (Cons notString Nil)) = throwError $ TypeMismatch "string" notString
+makeStr (Cons x (Cons y Nil)) = throwError $ BadSpecialForm "Incorrect `make-string` syntax. First argument should be an int, second should be a singleton string" $ List (x:y:Nil)
 makeStr badArgs = throwError $ NumArgs 2 badArgs
 
-strLength :: Array LispVal -> ThrowsError LispVal
-strLength [String s] = return $ Int $ S.length s
-strLength [notString] = throwError $ TypeMismatch "string" notString
+strLength :: List LispVal -> ThrowsError LispVal
+strLength (Cons (String s) Nil) = return $ Int $ S.length s
+strLength (Cons notString Nil) = throwError $ TypeMismatch "string" notString
 strLength badArgs = throwError $ NumArgs 1 badArgs
 
-strRef :: Array LispVal -> ThrowsError LispVal
-strRef [String s, n@(Int k)] = case S.charAt k s of
-                                   Just c -> return $ String $ S.singleton c
-                                   Nothing -> throwError $ TypeMismatch ("index smaller than " ++ (show $ S.length s)) n
-strRef [notString, Int _] = throwError $ TypeMismatch "string" notString
-strRef [String _, notInt] = throwError $ TypeMismatch "int" notInt
-strRef [x, y] = throwError $ BadSpecialForm "Incorrect `string-ref` syntax" $ List [x, y]
+strRef :: List LispVal -> ThrowsError LispVal
+strRef (Cons (String s) (Cons n@(Int k) Nil)) = case S.charAt k s of
+                                                     Just c -> return $ String $ S.singleton c
+                                                     Nothing -> throwError $ TypeMismatch ("index smaller than " ++ (show $ S.length s)) n
+strRef (Cons notString (Cons (Int _) Nil)) = throwError $ TypeMismatch "string" notString
+strRef (Cons (String _) (Cons notInt Nil)) = throwError $ TypeMismatch "int" notInt
+strRef (Cons x (Cons y Nil)) = throwError $ BadSpecialForm "Incorrect `string-ref` syntax" $ List (x:y:Nil)
 strRef badArgs = throwError $ NumArgs 2 badArgs
 
-substr :: Array LispVal -> ThrowsError LispVal
-substr [String s, i@(Int start), f@(Int end)]
-  | 0 <= start && start <= end && end <= S.length s = return $ String (s # S.take end # S.drop start)
-  | otherwise = throwError $ TypeMismatch ("indices between 0 and " ++ (show $ S.length s)) (List [i, f])
-substr [notString, Int _, Int _] = throwError $ TypeMismatch "string" notString
-substr [_, notInt, Int _] = throwError $ TypeMismatch "int" notInt
-substr [_, _, notInt] = throwError $ TypeMismatch "int" notInt
-substr [x, y, z] = throwError $ BadSpecialForm "Incorrect `substring` syntax" $ List [x,y,z]
+substr :: List LispVal -> ThrowsError LispVal
+substr (Cons (String s) (Cons i@(Int start) (Cons f@(Int end) Nil)))
+  | 0 <= start && start <= end && end <= S.length s = return $ String $ S.drop start $ S.take end s
+  | otherwise = throwError $ TypeMismatch ("indices between 0 and " ++ (show $ S.length s)) (List (i:f:Nil))
+substr (Cons x (Cons y (Cons z Nil))) = throwError $ BadSpecialForm "Incorrect `substring` syntax. First argument should be a string, second and third should be ints." $ List (x:y:z:Nil)
 substr badArgs = throwError $ NumArgs 3 badArgs
 
-strAppend :: Array LispVal -> ThrowsError LispVal
-strAppend [] = throwError $ NumArgs 1 []
+strAppend :: List LispVal -> ThrowsError LispVal
+strAppend Nil = throwError $ NumArgs 1 Nil
 strAppend args
-  | isJust $ traverse fromString args = return $ String $ foldl (\acc (String s) -> acc ++ s) "" args
+  | all isString args = return $ String $ foldl (\ acc (String s) -> acc ++ s) "" args
   | otherwise = throwError $ TypeMismatch "list of strings" $ List args
 
-str2list :: Array LispVal -> ThrowsError LispVal
-str2list [String s] = return $ List <<< map String $ toChars s
-str2list [notString] = throwError $ TypeMismatch "string" notString
+str2list :: List LispVal -> ThrowsError LispVal
+str2list (Cons (String s) Nil) = return $ List $ map String $ toChars s
+str2list (Cons notString Nil) = throwError $ TypeMismatch "string" notString
 str2list badArgs = throwError $ NumArgs 1 badArgs
 
-list2str :: Array LispVal -> ThrowsError LispVal
-list2str [List ss]  = strAppend ss
-list2str [notList] = throwError $ TypeMismatch "list" notList
+list2str :: List LispVal -> ThrowsError LispVal
+list2str (Cons (List ss) Nil) = strAppend ss
+list2str (Cons notList Nil) = throwError $ TypeMismatch "list" notList
 list2str badArgs = throwError $ NumArgs 1 badArgs

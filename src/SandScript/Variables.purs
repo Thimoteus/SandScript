@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Maybe
 import Data.Tuple
-import Data.Array hiding (cons)
+import Data.List
 import Data.Traversable
 
 import Control.Apply ((*>))
@@ -19,7 +19,7 @@ import SandScript.Util
 import SandScript.Eval.Primitives
 
 nullEnv :: LispF Env
-nullEnv = newRef []
+nullEnv = newRef Nil
 
 isBound :: Env -> String -> LispF Boolean
 isBound envRef var = readRef envRef >>= return <<< maybe false (const true) <<< lookup var
@@ -50,7 +50,7 @@ defineVar envRef var value = do
       liftEff $ writeRef envRef ((Tuple var valueRef) : env)
       return value
 
-bindVars :: Env -> Array (Tuple String LispVal) -> LispF Env
+bindVars :: Env -> List (Tuple String LispVal) -> LispF Env
 bindVars envRef bindings = readRef envRef >>= extendEnv bindings >>= newRef where
   extendEnv bindings env = map (++ env) (traverse addBindings bindings)
   addBindings (Tuple var value) = do

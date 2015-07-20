@@ -3,9 +3,11 @@ module Main where
 import Prelude
 
 import Data.Array (drop)
+import Data.List ((:), List(..), toList)
 import Data.Array.Unsafe (unsafeIndex)
 import Data.Either
 import Data.Maybe
+import Data.Tuple
 import Data.Traversable (traverse)
 
 import Control.Monad.Eff
@@ -27,10 +29,13 @@ import Node.Yargs.Applicative
 evalString :: forall r. Env -> String -> LispF String
 evalString env expr = runEffThrows $ liftA1 show $ (liftThrows $ readExpr expr) >>= eval env
 
+loadLib :: Env -> String -> LispF Unit
+loadLib env filename = (runEffThrows $ map show $ eval env (List (Atom "load" : String filename : Nil))) >>= error
+
 runOne :: Array String -> LispF Unit
 runOne args = do
-  env <- primitiveBindings >>= flip bindVars [ "args" & List $ map String $ drop 1 args ]
-  (runEffThrows $ map show $ eval env (List [Atom "load", String (args `unsafeIndex` 0)])) >>= error
+  env <- primitiveBindings >>= (flip bindVars $ Cons ("args" & (List $ map String $ toList $ drop 1 args)) Nil)
+  loadLib env (args `unsafeIndex` 0)
 
 runRepl :: LispF Unit
 runRepl = do
@@ -42,9 +47,10 @@ runRepl = do
         log evaled
         prompt interface
 
+  initialEnvironment <- primitiveBindings
+  loadLib initialEnvironment "lang/Prelude.sand"
   setPrompt "> " 2 interface
   prompt interface
-  initialEnvironment <- primitiveBindings
   setLineHandler (lineHandler initialEnvironment) interface
   return unit
 
@@ -55,5 +61,5 @@ app xs = runOne xs
 main :: LispF Unit
 main = do
   let setup = usage "$0 -r File" 
-              <> example "$0 -r App.sans" "Run App.sans"
+              <> example "$0 -r App.sand" "Run App.sand"
   runY setup $ app <$> yarg "r" ["run"] (Just "A filename") (Left ["repl"]) false

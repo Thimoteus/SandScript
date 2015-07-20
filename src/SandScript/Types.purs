@@ -6,6 +6,7 @@ import Math hiding (log)
 import Data.Either
 import Data.Maybe
 import Data.Tuple
+import Data.List
 import qualified Data.Int as I
 
 import Control.Monad.Error
@@ -24,28 +25,29 @@ type LispFH = ( ref :: REF, console :: CONSOLE, fs :: FS, err :: Exc.EXCEPTION )
 
 type ThrowsError a = Either LispError a
 
-type Env = Ref (Array (Tuple String (Ref LispVal)))
+type Env = Ref (List (Tuple String (Ref LispVal)))
 
 type EffThrowsError a = ErrorT LispError LispF a
 
 type LispF = Eff LispFH
 
 data LispVal = Atom String
-             | List (Array LispVal)
-             | DottedList (Array LispVal) LispVal
+             | List (List LispVal)
+             | DottedList (List LispVal) LispVal
+             | Vector (Array LispVal)
              | Int Int
              | Float Number
              | Frac (Tuple Int Int)
              | Complex { real :: Number, imaginary :: Number }
              | String String
              | Bool Boolean
-             | PrimitiveFunc (Array LispVal -> ThrowsError LispVal)
-             | Func { params :: Array String, varargs :: Maybe String
-                    , body :: Array LispVal, closure :: Env }
-             | EffFunc (Array LispVal -> EffThrowsError LispVal)
+             | PrimitiveFunc (List LispVal -> ThrowsError LispVal)
+             | Func { params :: List String, varargs :: Maybe String
+                    , body :: List LispVal, closure :: Env }
+             | EffFunc (List LispVal -> EffThrowsError LispVal)
              | Port FileDescriptor
 
-data LispError = NumArgs Int (Array LispVal)
+data LispError = NumArgs Int (List LispVal)
                | TypeMismatch String LispVal
                | Parserr ParseError
                | BadSpecialForm String LispVal
@@ -59,9 +61,10 @@ data Op = Add | Sub | Mul | Div
 
 instance showLispVal :: Show LispVal where
   show (Atom s) = s
-  show (List [Atom "quote", x]) = "'" ++ show x
+  show (List (Cons (Atom "quote") (Cons x Nil))) = "'" ++ show x
   show (List xs) = "(" ++ unwordsList xs ++ ")"
   show (DottedList xs x) = "(" ++ unwordsList xs ++ " . " ++ show x ++ ")"
+  show (Vector xs) = "[" ++ unwordsArray xs ++ "]"
   show (Int n)
     | n < 0  = "~" ++ show (absInt n)
     | otherwise = show n
@@ -94,6 +97,7 @@ instance eqLispVal :: Eq LispVal where
   eq (Atom p) (Atom q) = p == q
   eq (List xs) (List ys) = xs == ys
   eq (DottedList xs x) (DottedList ys y) = xs == ys && x == y
+  eq (Vector xs) (Vector ys) = xs == ys
   eq (Int n) (Int m) = n == m
   eq (Float n) (Float m) = n == m
   eq (Frac p) (Frac q) = p == q

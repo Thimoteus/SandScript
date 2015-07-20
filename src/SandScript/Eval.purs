@@ -7,8 +7,8 @@ import Data.Tuple
 import Data.Either
 import Data.Foldable
 import Data.Traversable
-import Data.Array hiding (cons)
-import qualified Data.Array.Unsafe as U
+import Data.List
+import qualified Data.List.Unsafe as U
 
 import Control.Apply ((*>))
 import Control.Monad.Error
@@ -36,38 +36,25 @@ eval env val@(Float _) = return val
 eval env val@(Complex _) = return val
 eval env val@(Bool _) = return val
 eval env (Atom id) = getVar env id
-eval env (List [Atom "quote", val]) = return val
-eval env (List [Atom "if", pred, conseq, alt]) = evalIf env pred conseq alt
-eval env (List [Atom "set", Atom var, form]) = eval env form >>= setVar env var
-eval env (List [Atom "def", Atom var, form]) = eval env form >>= defineVar env var
-eval env (List [Atom "load", String filename]) = load filename >>= map U.last <<< traverse (eval env)
-eval env (List ls)
-  | ls !! 0 == Just (Atom "def") =
-    case uncons (drop 1 ls) of
-         Just { head = List xs, tail = body } -> case uncons xs of
-                                                      Just { head = Atom var, tail = params } -> makeNormalFunc env params body >>= defineVar env var
-                                                      _ -> throwError $ NotFunction "Did not recognize function" (show $ List xs)
-         Just { head = DottedList xs varargs, tail = body } -> case uncons xs of
-                                                                    Just { head = Atom var, tail = params } -> makeVarArgs varargs env params body >>= defineVar env var
-                                                                    _ -> throwError $ NotFunction "Did not recognize function" (show $ List xs)
-         _ -> throwError $ NotFunction "Failed `def` parse" (show $ List ls)
-  | ls !! 0 == Just (Atom "lambda") =
-    case uncons (drop 1 ls) of
-         Just { head = List params, tail = body } -> makeNormalFunc env params body
-         Just { head = DottedList params varargs, tail = body } -> makeVarArgs varargs env params body
-         Just { head = varargs@(Atom _), tail = body } -> makeVarArgs varargs env [] body
-         _ -> throwError $ NotFunction "Failed `lambda` parse" (show $ List ls)
-  | otherwise = case uncons ls of
-                     Just { head = Atom "case", tail = args } -> evalCase env args
-                     Just { head = Atom "cond", tail = args } -> evalCond env args
-                     Just { head = function, tail = args } -> do
-                       func <- eval env function
-                       argVals <- traverse (eval env) args
-                       fapply func argVals
-                     _ -> throwError $ NotFunction "Did not recognize function" (show $ List ls)
+eval env (List (Cons (Atom "quote") (Cons val Nil))) = return val
+eval env (List (Cons (Atom "if") (Cons pred (Cons (conseq) (Cons alt Nil))))) = evalIf env pred conseq alt
+eval env (List (Cons (Atom "set") (Cons (Atom var) (Cons form Nil)))) = eval env form >>= setVar env var
+eval env (List (Cons (Atom "def") (Cons (Atom var) (Cons form Nil)))) = eval env form >>= defineVar env var
+eval env (List (Cons (Atom "load") (Cons (String filename) Nil))) = load filename >>= map U.last <<< traverse (eval env)
+eval env (List (Cons (Atom "def") (Cons (List (Cons (Atom var) params)) body))) = makeNormalFunc env params body >>= defineVar env var
+eval env (List (Cons (Atom "def") (Cons (DottedList (Cons (Atom var) params) varargs) body))) = makeVarArgs varargs env params body >>= defineVar env var
+eval env (List (Cons (Atom "lambda") (Cons (List params) body))) = makeNormalFunc env params body
+eval env (List (Cons (Atom "lambda") (Cons (DottedList params varargs) body))) = makeVarArgs varargs env params body
+eval env (List (Cons (Atom "lambda") (Cons varargs@(Atom _) body))) = makeVarArgs varargs env Nil body
+eval env (List (Cons (Atom "case") args)) = evalCase env args
+eval env (List (Cons (Atom "cond") args)) = evalCond env args
+eval env (List (Cons function args)) = do
+  func <- eval env function
+  argVals <- traverse (eval env) args
+  fapply func argVals
 eval env badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 
-fapply :: LispVal -> Array LispVal -> EffThrowsError LispVal
+fapply :: LispVal -> List LispVal -> EffThrowsError LispVal
 fapply (PrimitiveFunc func) args = liftThrows $ func args
 fapply (Func { params = params, varargs = varargs, body = body, closure = closure }) args =
   if (length params /= length args) && isNothing varargs
@@ -76,11 +63,11 @@ fapply (Func { params = params, varargs = varargs, body = body, closure = closur
        remainingArgs = drop (length params) args
        evalBody env = map U.last $ traverse (eval env) body
        bindVarArgs arg env = case arg of
-                                  Just argName -> liftEff $ bindVars env [Tuple argName (List remainingArgs)]
+                                  Just argName -> liftEff $ bindVars env (Tuple argName (List remainingArgs) : Nil)
                                   Nothing -> return env
 fapply (EffFunc func) args = func args
 
-makeFunc :: Maybe String -> Env -> Array LispVal -> Array LispVal -> EffThrowsError LispVal
+makeFunc :: Maybe String -> Env -> List LispVal -> List LispVal -> EffThrowsError LispVal
 makeFunc varargs env params body = return $ Func { params: (map show params), varargs: varargs, body: body, closure: env }
 makeNormalFunc = makeFunc Nothing
 makeVarArgs = makeFunc <<< Just <<< (show :: LispVal -> String)
@@ -94,30 +81,26 @@ evalIf env pred conseq alt = do
        Bool true -> eval env conseq
        notBool -> throwError $ TypeMismatch "bool" notBool
 
-evalCase :: Env -> Array LispVal -> EffThrowsError LispVal
-evalCase env as = case uncons as of
-                       Just xs -> ecase env xs.head xs.tail
-                       Nothing -> throwError $ NumArgs 1 []
+evalCase :: Env -> List LispVal -> EffThrowsError LispVal
+evalCase env (Cons x xs) = ecase env x xs
+evalCase _ _ = throwError $ NumArgs 1 Nil
 
-ecase :: Env -> LispVal -> Array LispVal -> EffThrowsError LispVal
-ecase _ _ [] = throwError PatternFail
-ecase env _ [List [Atom "else", val]] = eval env val
-ecase env key clauses = case uncons clauses of
-                             Just { head = List [List datums, val], tail = rest } -> do
-                               evaldKey <- eval env key
-                               if evaldKey `elem` datums
-                                  then eval env val
-                                  else ecase env key rest
+ecase :: Env -> LispVal -> List LispVal -> EffThrowsError LispVal
+ecase _ _ Nil = throwError PatternFail
+ecase env _ (Cons (List (Cons (Atom "else") (Cons val Nil))) Nil) = eval env val
+ecase env key (Cons (List (Cons (List datums) (Cons val Nil))) rest) = do
+  evaldKey <- eval env key
+  if evaldKey `elem` datums
+     then eval env val
+     else ecase env key rest
 
-evalCond :: Env -> Array LispVal -> EffThrowsError LispVal
-evalCond env clauses = case uncons clauses of
-                            Just { head = List [Atom "else", expr],  tail = [] } -> eval env expr
-                            Just { head = List [test@(List ts), expr], tail = rest } -> condChecker env test expr rest
-                            Just { head = List [test@(List ts)], tail = rest } -> condChecker env test test rest
-                            Just xs -> throwError $ BadSpecialForm "Incorrect `cond` syntax" xs.head
-                            _ -> throwError ConditionalFail
+evalCond :: Env -> List LispVal -> EffThrowsError LispVal
+evalCond env (Cons (List (Cons (Atom "else") (Cons expr Nil))) Nil) = eval env expr
+evalCond env (Cons (List (Cons test@(List _) (Cons expr Nil))) rest) = condChecker env test expr rest
+evalCond env (Cons (List (Cons test@(List _) Nil)) rest) = condChecker env test test rest
+evalCond _ _ = throwError ConditionalFail
 
-condChecker :: Env -> LispVal -> LispVal -> Array LispVal -> EffThrowsError LispVal
+condChecker :: Env -> LispVal -> LispVal -> List LispVal -> EffThrowsError LispVal
 condChecker env test expr rest = do
   result <- eval env test
   case result of
@@ -126,34 +109,35 @@ condChecker env test expr rest = do
 
 -- EffPrimitives
 
-effPrimitives :: Array (Tuple String ((Array LispVal) -> EffThrowsError LispVal))
-effPrimitives = [ "apply" & applyProc
-                , "open-input-file" & makePort R
-                , "open-output-file" & makePort W
-                , "close-input-port" & closePort
-                , "read-contents" & readContents
-                , "read-all" & readAll
-                , "close-output-port" & closePort ]
+effPrimitives :: List (Tuple String ((List LispVal) -> EffThrowsError LispVal))
+effPrimitives = "apply" & applyProc
+              : "open-input-file" & makePort R
+              : "open-output-file" & makePort W
+              : "close-input-port" & closePort
+              : "read-contents" & readContents
+              : "read-all" & readAll
+              : "close-output-port" & closePort
+              : Nil
 
-applyProc :: Array LispVal -> EffThrowsError LispVal
-applyProc [func, List args] = fapply func args
-applyProc arr | length arr > 0 = fapply (U.head arr) (U.tail arr)
+applyProc :: List LispVal -> EffThrowsError LispVal
+applyProc (Cons func (Cons (List args) Nil)) = fapply func args
+applyProc (Cons func args) = fapply func args
 
-makePort :: FileFlags -> Array LispVal -> EffThrowsError LispVal
-makePort flag [String filename] = liftEff $ Port <$> fdOpen filename flag Nothing
+makePort :: FileFlags -> List LispVal -> EffThrowsError LispVal
+makePort flag (Cons (String filename) Nil) = liftEff $ Port <$> fdOpen filename flag Nothing
 
-closePort :: Array LispVal -> EffThrowsError LispVal
-closePort [Port port] = liftEff $ fdClose port *> (return $ Bool true)
+closePort :: List LispVal -> EffThrowsError LispVal
+closePort (Cons (Port port) Nil) = liftEff $ fdClose port *> (return $ Bool true)
 closePort _ = return $ Bool false
 
-readContents :: Array LispVal -> EffThrowsError LispVal
-readContents [String filename] = liftEff $ (String <<< toString ASCII) <$> readFile filename
+readContents :: List LispVal -> EffThrowsError LispVal
+readContents (Cons (String filename) Nil) = liftEff $ (String <<< toString ASCII) <$> readFile filename
 
-load :: String -> EffThrowsError (Array LispVal)
+load :: String -> EffThrowsError (List LispVal)
 load filename = (liftEff $ toString ASCII <$> readFile filename) >>= (liftThrows <<< readExprList)
 
-readAll :: Array LispVal -> EffThrowsError LispVal
-readAll [String filename] = map List $ load filename
+readAll :: List LispVal -> EffThrowsError LispVal
+readAll (Cons (String filename) Nil) = map List $ load filename
 
 primitiveBindings :: LispF Env
 primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' PrimitiveFunc) primitives ++ map (makeFunc' EffFunc) effPrimitives)
