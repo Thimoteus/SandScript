@@ -44,4 +44,4 @@ Primitive types come in the following flavors:
 6. Fracs => 2/3, ~2/3
 7. Complex => 1.0+0.0i, ~0.5+~3.14i
 
-There are two types of collections: lists and [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp), both of which are heterogeneous.
+There are three types of collections: (linked) lists, [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp) and arrays, all of which are heterogeneous.

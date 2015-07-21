@@ -1,43 +1,73 @@
 ; this is a comment
 ; Bool -> Bool
-(def (not x) (if x false true))
+(defn not [x] (if x false true))
 ; a -> Bool
-(def (nil? obj) (if (eqv? obj '()) true false))
+(defn nil? [obj] (if (eqv? obj '()) true false))
 ; a -> b -> c -> ... -> (a,b,c...)
 (def (list . objs) objs)
 
+(defn empty? [arr] (if (eqv? arr []) true false))
+
 ; every functional programmer should have these
 ; a -> a
-(def (id x) x)
+(defn id [x] x)
 ; (a -> b -> c) -> b -> a -> c
-(def (flip func) (lambda (arg1 arg2) (func arg2 arg1)))
-(def (partial func arg1) (lambda (arg) (apply func (cons arg1 (list arg)))))
-(def (comp f g) (lambda (arg) (f (apply g arg))))
+(defn flip [func] (lambda (arg1 arg2) (func arg2 arg1)))
+(defn partial [func arg1] (lambda (arg) (apply func (cons arg1 (list arg)))))
+(defn comp [f g] (lambda (arg) (f (apply g arg))))
 
 ; let's get mathematical
 (def zero? (partial = 0))
 (def pos? (partial < 0))
 (def neg? (partial > 0))
-(def (odd? num) (= (mod num 2) 1))
-(def (even? num) (= (mod num 2) 0))
+(defn odd? [n] (= (mod n 2) 1))
+(defn even? [n] (= (mod n 2) 0))
 
 ; staples
-(def (foldr func end lst)
-  (if (nil? lst)
-    end
-    (func (head lst) (foldr func end (tail lst)))))
-(def (foldl func accum lst)
-  (if (nil? lst)
-    accum
-    (foldl func (func accum (head lst)) (tail lst))))
-(def (unfold func init pred)
+(defn map [func seq]
+  (cond
+    ((list? seq)
+     (reduce (lambda (x y) (cons (func x) y)) '() seq))
+    ((vector? seq)
+     (reduce (lambda (x y) (cons (func x) y)) [] seq))))
+
+(defn foldr [func end seq]
+  (cond
+    ((vector? seq)
+     (if (empty? seq)
+       end
+       (func (head seq) (foldr func end (tail seq)))))
+    ((list? seq)
+     (if (nil? seq)
+       end
+       (func (head seq) (foldr func end (tail seq)))))))
+
+(defn foldl [func acc seq]
+  (cond
+    ((vector? seq)
+     (if (empty? seq)
+       acc
+       (foldl func (func acc (head seq)) (tail seq))))
+    ((list? seq)
+     (if (nil? seq)
+       acc
+       (foldl func (func acc (head seq)) (tail seq))))))
+
+(defn filter [func seq]
+  (cond
+    ((list? seq) (filterH func seq nil))
+    ((vector? seq) (filterH func seq empty))))
+
+(defn filterH [func seq mempty]
+     (reduce (lambda (x acc) (if (func x) (cons x acc) acc)) mempty seq))
+
+(defn unfold [func init pred]
   (if (pred init)
     (cons init '())
     (cons init (unfold func (func init) pred))))
+
 (def reduce foldr)
 (def fold foldl)
-(def (map func lst) (reduce (lambda (x y) (cons (func x) y)) '() lst))
-(def (filter pred lst) (reduce (lambda (x y) (if (pred x) (cons x y) y)) '() lst))
 
 (def (sum . lst) (fold + 0 lst))
 (def (prod . lst) (fold * 1 lst))
@@ -47,8 +77,11 @@
 (def (max first . rest) (fold (lambda (old new) (if (> old new) old new)) first rest))
 (def (min first . rest) (fold (lambda (old new) (if (< old new) old new)) first rest))
 
-(def (count lst) (fold (lambda (acc curr) (+ acc 1)) 0 lst))
-(def (reverse lst) (fold (flip cons) '() lst))
+(defn count [lst] (fold (lambda (acc curr) (inc acc)) 0 lst))
+(defn reverse [seq]
+  (cond
+    ((list? seq) (fold (flip cons) '() seq))
+    ((vector? seq) (fold (flip cons) [] seq))))
 
 ; member and assoc
 (def (mem-helper pred op) (lambda (acc next) (if (and (not acc) (pred (op next))) next acc)))
@@ -57,32 +90,57 @@
 (def (assq obj alist) (fold (mem-helper (partial eq? obj) head) false alist))
 (def (assv obj alist) (fold (mem-helper (partial eqv? obj) head) false alist))
 
-; list stuff
+; List a
 (def nil '())
-(def (ind i lst) (indH i lst 0))
-(def (indH i lst cur)
-  (cond
-    ((nil? lst) '())
-    ((= i cur) (head lst))
-    (else (indH i (tail lst) (inc cur)))))
 
+; [a]
+(def empty [])
+
+; Int -> Int -> List Int
 (def (range start end)
   (unfold inc start
           (lambda (n) (if (= n end) true false))))
 
-(def (last lst) (head (reverse lst)))
+; List a | [a] -> a
+(defn last [seq] (head (reverse seq)))
+
+(def (append first . rest)
+  (fold bappend first rest))
+
+(defn bappend [seq1 seq2]
+  (reduce cons seq2 seq1))
 
 ; TODO: write flatten
 
 ; math library
-(def (neg x) (- 0 x))
-(def (inc n) (+ n 1))
-(def (dec n) (- n 1))
+; Number -> Number
+(defn neg [x]
+  (cond
+    ((int? x) (- 0 x))
+    ((float? x) (- 0.0 x))
+    ((frac? x) (- 0/1 x))
+    (complex? x) (- 0.0+0.0i x)))
 
+; Number -> Number
+(defn inc [x]
+  (cond
+    ((int? x) (+ 1 x))
+    ((float? x) (+ 1.0 x))
+    ((frac? x) (+ 1/1 x))
+    (complex? x) (+ 1.0+0.0i x)))
+
+; Number -> Number
+(defn dec [x]
+  (cond
+    ((int? x) (- x 1))
+    ((float? x) (- x 1.0))
+    ((frac? x) (- x 1/1))
+    (complex? x) (- x 1.0+0.0i)))
+
+; Int -> Int -> Bool
 (def (divides m n)
   (if (zero? (mod n m))
     true
     false))
 
 "Prelude loaded."
-

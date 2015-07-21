@@ -139,21 +139,24 @@ skipComment = do
   return unit
 
 parseList :: SParser LispVal -> SParser LispVal
-parseList pars = do
-  x <- pars `sepBy` whiteSpace
-  return $ List (fromList x)
+parseList pars = List <$> sepBy pars whiteSpace
 
 parseDottedList :: SParser LispVal -> SParser LispVal
 parseDottedList pars = do
-  head <- pars `endBy` whiteSpace
-  tail <- char '.' *> whiteSpace *> pars
-  return $ DottedList (fromList head) tail
+  init <- pars `endBy` whiteSpace
+  last <- char '.' *> whiteSpace *> pars
+  return $ DottedList init last
 
 parseQuoted :: SParser LispVal -> SParser LispVal
 parseQuoted pars = do
   string "'"
   x <- pars
   return $ List $ (Atom "quote") : x : Nil
+
+parseVector :: SParser LispVal -> SParser LispVal
+parseVector pars = do
+  x <- pars `sepBy` (oneOf [' ', ','])
+  return $ Vector (fromList x)
 
 parseExpr :: SParser LispVal
 parseExpr = fix $ \ p -> (parseString
@@ -163,6 +166,11 @@ parseExpr = fix $ \ p -> (parseString
                      <|> (do
                          skipComment
                          return $ String "")
+                     <|> (do
+                         string "["
+                         x <- parseVector p
+                         string "]"
+                         return x)
                      <|> (do
                          string "("
                          x <- try (parseList p) <|> (parseDottedList p)

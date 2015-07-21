@@ -8,6 +8,7 @@ import Data.Either
 import Data.Foldable
 import Data.Traversable
 import Data.List
+import qualified Data.Array as A
 import qualified Data.List.Unsafe as U
 
 import Control.Apply ((*>))
@@ -15,6 +16,7 @@ import Control.Monad.Error
 import Control.Monad.Error.Class
 import Control.Bind ((=<<))
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (log)
 
 import Node.FS
 import Node.FS.Sync
@@ -36,6 +38,7 @@ eval env val@(Float _) = return val
 eval env val@(Complex _) = return val
 eval env val@(Bool _) = return val
 eval env (Atom id) = getVar env id
+eval env val@(Vector xs) = return val
 eval env (List (Cons (Atom "quote") (Cons val Nil))) = return val
 eval env (List (Cons (Atom "if") (Cons pred (Cons (conseq) (Cons alt Nil))))) = evalIf env pred conseq alt
 eval env (List (Cons (Atom "set") (Cons (Atom var) (Cons form Nil)))) = eval env form >>= setVar env var
@@ -43,6 +46,8 @@ eval env (List (Cons (Atom "def") (Cons (Atom var) (Cons form Nil)))) = eval env
 eval env (List (Cons (Atom "load") (Cons (String filename) Nil))) = load filename >>= map U.last <<< traverse (eval env)
 eval env (List (Cons (Atom "def") (Cons (List (Cons (Atom var) params)) body))) = makeNormalFunc env params body >>= defineVar env var
 eval env (List (Cons (Atom "def") (Cons (DottedList (Cons (Atom var) params) varargs) body))) = makeVarArgs varargs env params body >>= defineVar env var
+eval env (List (Cons (Atom "defn") (Cons (Atom var) (Cons (Vector params) body)))) =
+  makeNormalFunc env (toList params) body >>= defineVar env var
 eval env (List (Cons (Atom "lambda") (Cons (List params) body))) = makeNormalFunc env params body
 eval env (List (Cons (Atom "lambda") (Cons (DottedList params varargs) body))) = makeVarArgs varargs env params body
 eval env (List (Cons (Atom "lambda") (Cons varargs@(Atom _) body))) = makeVarArgs varargs env Nil body
@@ -117,6 +122,8 @@ effPrimitives = "apply" & applyProc
               : "read-contents" & readContents
               : "read-all" & readAll
               : "close-output-port" & closePort
+              : "trace" & trace
+              : "crash" & crash
               : Nil
 
 applyProc :: List LispVal -> EffThrowsError LispVal
@@ -139,8 +146,46 @@ load filename = (liftEff $ toString ASCII <$> readFile filename) >>= (liftThrows
 readAll :: List LispVal -> EffThrowsError LispVal
 readAll (Cons (String filename) Nil) = map List $ load filename
 
+trace :: List LispVal -> EffThrowsError LispVal
+trace args = do
+  liftEff $ traverse log (show <$> args)
+  return Bot
+
+crash :: List LispVal -> EffThrowsError LispVal
+crash _ = throwError Crash
+
 primitiveBindings :: LispF Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' PrimitiveFunc) primitives ++ map (makeFunc' EffFunc) effPrimitives)
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' PrimitiveFunc) primitives ++ map (makeFunc' EffFunc) effPrimitives ++ map (makeFunc' EffFunc) higherOrderPrimitives)
   where
   makeFunc' :: forall a. (a -> LispVal) -> Tuple String a -> Tuple String LispVal
   makeFunc' constructor (Tuple var func) = Tuple var (constructor func)
+
+-- higher-order fns
+
+higherOrderPrimitives :: List (Tuple String (List LispVal -> EffThrowsError LispVal))
+higherOrderPrimitives = "map-io" & mapImpl
+                      : "filter-io" & filterImpl
+                      : Nil
+
+gmap :: LispVal -> LispVal -> EffThrowsError LispVal
+gmap func@(Func _) (List args) = List <$> traverse (fapply func) (singleton <$> args)
+gmap func@(Func _) (Vector args) = Vector <<< fromList <$> traverse (fapply func) (singleton <$> toList args)
+gmap func@(PrimitiveFunc _) (List args) = List <$> traverse (fapply func) (singleton <$> args)
+gmap func@(PrimitiveFunc _) (Vector args) = Vector <<< fromList <$> traverse (fapply func) (singleton <$> toList args)
+
+mapImpl :: List LispVal -> EffThrowsError LispVal
+mapImpl (Cons func (Cons args _)) = gmap func args
+
+coerceLispFn :: LispVal -> List LispVal -> EffThrowsError Boolean
+coerceLispFn fn args = do
+  result <- fapply fn args
+  case result of
+       Bool b -> return b
+       notBool -> throwError $ TypeMismatch "boolean function" notBool
+
+gfilter :: LispVal -> LispVal -> EffThrowsError LispVal
+gfilter func@(Func _) (List args) = List <<< concat <$> filterM (coerceLispFn func) (singleton <$> args)
+gfilter func@(Func _) (Vector args) = Vector <<< A.concat <$> A.filterM (coerceLispFn func <<< toList) (A.singleton <$> args)
+
+filterImpl :: List LispVal -> EffThrowsError LispVal
+filterImpl (Cons func (Cons args _)) = gfilter func args

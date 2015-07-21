@@ -8,6 +8,7 @@ import Data.Maybe
 import Data.Foldable
 import Data.Traversable
 import Data.List
+import qualified Data.Array as A
 import qualified Data.List.Unsafe as U
 import qualified Data.String as S
 import qualified Data.Char as C
@@ -59,9 +60,9 @@ primitives = "+" & overloadedPlus
            : "string->list" & str2list
            : "list->string" & list2str
            -- list operators
+           : "list?" & isList
            : "head" & car
            : "tail" & cdr
-           : "cons" & cons
            : "ind" & ind
            -- equality checking
            : "eq?" & eqv
@@ -69,6 +70,14 @@ primitives = "+" & overloadedPlus
            -- String -> String
            : "symbol->string" & sym2str
            : "string->symbol" & str2sym
+           -- vectors
+           : "vector?" & isVector
+           : "vector->list" & vec2lst
+           : "list->vector" & lst2vec
+           : "v-range" & vrange
+           -- both vectors and lists
+           : "cons" & cons
+           : "sort" & gsort
            : Nil
 
 fracArith :: Op -> Tuple Int Int -> Tuple Int Int -> Tuple Int Int
@@ -247,9 +256,17 @@ str2sym vs = throwError $ NumArgs 1 vs
 --boolNot badArgs = throwError $ NumArgs 1 badArgs
 
 -- List primitives
+
+isList :: List LispVal -> ThrowsError LispVal
+isList (Cons (List _) Nil) = return $ Bool true
+isList _ = return $ Bool false
+
 car :: List LispVal -> ThrowsError LispVal
 car (Cons (List (Cons x xs)) Nil) = return x
 car (Cons (DottedList (Cons x xs) _) Nil) = return x
+car (Cons (Vector xs) Nil) = case A.head xs of
+                                  Just x -> return x
+                                  Nothing -> throwError $ NumArgs 1 Nil
 car (Cons badArg Nil) = throwError $ TypeMismatch "pair" badArg
 car badArgList = throwError $ NumArgs 1 badArgList
 
@@ -257,22 +274,21 @@ cdr :: List LispVal -> ThrowsError LispVal
 cdr (Cons (List (Cons _ xs)) Nil) = return $ List xs
 cdr (Cons (DottedList (Cons _ Nil) x) Nil) = return x
 cdr (Cons (DottedList (Cons _ xs) x) Nil) = return $ DottedList xs x
+cdr (Cons (Vector xs) Nil) = case A.tail xs of
+                                  Just xss -> return $ Vector xss
+                                  _ -> throwError $ NumArgs 1 Nil
 cdr (Cons (badArg) Nil) = throwError $ TypeMismatch "pair" badArg
 cdr badArgList = throwError $ NumArgs 1 badArgList
-
-cons :: List LispVal -> ThrowsError LispVal
-cons (Cons x (Cons (List Nil) Nil)) = return $ List $ singleton x
-cons (Cons x (Cons (List xs) Nil)) = return $ List (x:xs)
-cons (Cons x (Cons (DottedList xs xf) Nil)) = return $ DottedList (x:xs) xf
-cons (Cons x1 (Cons x2 Nil)) = return $ DottedList (singleton x1) x2
-cons badArgList = throwError $ NumArgs 2 badArgList
 
 ind :: List LispVal -> ThrowsError LispVal
 ind (Cons (Int i) (Cons (List xs) Nil)) = maybe (return $ List Nil)
                                                 (\ b -> return b)
                                                 (xs !! i)
+ind (Cons (Int i) (Cons (Vector xs) Nil)) = maybe (return $ Vector [])
+                                                  (\ b -> return b)
+                                                  (xs A.!! i)
 ind (Cons notInt (Cons (List _) Nil)) = throwError $ TypeMismatch "int" notInt
-ind (Cons (Int _) (Cons notList Nil)) = throwError $ TypeMismatch "list" notList
+ind (Cons (Int _) (Cons notList Nil)) = throwError $ TypeMismatch "list or vector" notList
 ind badArgs = throwError $ NumArgs 2 badArgs
 
 -- equality
@@ -286,13 +302,15 @@ eqv (Cons (Complex z1) (Cons (Complex z2) Nil)) = return $ Bool (z1.real == z2.r
 eqv (Cons (String s) (Cons (String s') Nil)) = return $ Bool (s == s')
 eqv (Cons (Atom p) (Cons (Atom q) Nil)) = return $ Bool (p == q)
 eqv (Cons (DottedList xs x) (Cons (DottedList ys y) Nil)) = eqv ((List $ snoc xs x) : (List $ snoc ys y) : Nil)
-eqv (Cons (List xs) (Cons (List ys) Nil)) = return $ Bool $ (length xs == length ys) && (all eqPair $ zip xs ys) where
-  eqPair :: Tuple LispVal LispVal -> Boolean
-  eqPair (Tuple v v') = case eqv (v : v' : Nil) of
-                             Left _ -> false
-                             Right (Bool v) -> v
+eqv (Cons (List xs) (Cons (List ys) Nil)) = return $ Bool $ (length xs == length ys) && (all eqPair $ zip xs ys)
+eqv (Cons (Vector xs) (Cons (Vector ys) Nil)) = return $ Bool $ (A.length xs == A.length ys) && (all eqPair $ A.zip xs ys)
 eqv (Cons _ (Cons _ Nil)) = return $ Bool false
 eqv badArgList = throwError $ NumArgs 2 badArgList
+
+eqPair :: Tuple LispVal LispVal -> Boolean
+eqPair (Tuple v v') = case eqv (v : v' : Nil) of
+                           Left _ -> false
+                           Right (Bool v) -> v
 
 -- string stuff
 makeStr :: List LispVal -> ThrowsError LispVal
@@ -340,3 +358,47 @@ list2str :: List LispVal -> ThrowsError LispVal
 list2str (Cons (List ss) Nil) = strAppend ss
 list2str (Cons notList Nil) = throwError $ TypeMismatch "list" notList
 list2str badArgs = throwError $ NumArgs 1 badArgs
+
+-- vector stuff
+isVector :: List LispVal -> ThrowsError LispVal
+isVector (Cons (Vector _) Nil) = return $ Bool true
+isVector _ = return $ Bool false
+
+vec2lst :: List LispVal -> ThrowsError LispVal
+vec2lst (Cons (Vector xs) Nil) = return $ List (toList xs)
+vec2lst (Cons notVec Nil) = throwError $ TypeMismatch "vector" notVec
+vec2lst badArgs = throwError $ NumArgs 1 badArgs
+
+lst2vec :: List LispVal -> ThrowsError LispVal
+lst2vec (Cons (List xs) Nil) = return $ Vector (fromList xs)
+lst2vec (Cons notList Nil) = throwError $ TypeMismatch "list" notList
+lst2vec badArgs = throwError $ NumArgs 1 badArgs
+
+vrange :: List LispVal -> ThrowsError LispVal
+vrange (Cons (Int start) (Cons (Int end) Nil)) = return $ Vector $ map Int $ A.range start end
+vrange (Cons x (Cons y Nil)) = throwError $ BadSpecialForm "Incorrect `v-range` syntax. Arguments should be ints." $ Vector [x,y]
+vrange badArgs = throwError $ NumArgs 2 badArgs
+
+-- vectors and lists
+
+cons :: List LispVal -> ThrowsError LispVal
+cons (Cons x (Cons (List Nil) Nil)) = return $ List $ singleton x
+cons (Cons x (Cons (List xs) Nil)) = return $ List (x:xs)
+cons (Cons x (Cons (DottedList xs xf) Nil)) = return $ DottedList (x:xs) xf
+cons (Cons x (Cons (Vector xs) Nil)) = return $ Vector $ A.cons x xs
+cons (Cons x1 (Cons x2 Nil)) = return $ DottedList (singleton x1) x2
+cons badArgList = throwError $ NumArgs 2 badArgList
+
+conjImpl :: List LispVal -> ThrowsError LispVal
+conjImpl (Cons x (Cons (List Nil) Nil)) = return $ List $ singleton x
+conjImpl (Cons x (Cons (List xs) Nil)) = return $ List (x:xs)
+conjImpl (Cons x (Cons (DottedList xs xf) Nil)) = return $ DottedList (x:xs) xf
+conjImpl (Cons x (Cons (Vector xs) Nil)) = return $ Vector $ A.snoc xs x
+conjImpl (Cons x1 (Cons x2 Nil)) = return $ DottedList (singleton x1) x2
+conjImpl badArgList = throwError $ NumArgs 2 badArgList
+
+gsort :: List LispVal -> ThrowsError LispVal
+gsort (Cons (Vector xs) Nil) = return $ Vector $ A.sort xs
+gsort (Cons (List xs) Nil) = return $ List $ sort xs
+gsort (Cons whatisthis Nil) = throwError $ TypeMismatch "list or vector" whatisthis
+gsort wrong = throwError $ NumArgs 2 wrong

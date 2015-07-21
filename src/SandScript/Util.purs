@@ -9,6 +9,7 @@ import Data.Foreign.Class
 import Data.Foldable
 import Data.Maybe
 import Data.Tuple
+import Data.Int (toNumber)
 
 import qualified Data.String as S
 
@@ -33,6 +34,9 @@ foldl1 f xs = foldl f (head xs) (tail xs)
 readNum :: String -> Maybe Int
 readNum s | s == show (str2num s) = Just $ str2num s
           | otherwise = Nothing
+
+frac2num :: Tuple Int Int -> Number
+frac2num (Tuple p q) = (toNumber p) / (toNumber q)
 
 (&) :: forall a b. a -> b -> Tuple a b
 (&) = Tuple

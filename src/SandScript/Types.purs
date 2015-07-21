@@ -46,6 +46,7 @@ data LispVal = Atom String
                     , body :: List LispVal, closure :: Env }
              | EffFunc (List LispVal -> EffThrowsError LispVal)
              | Port FileDescriptor
+             | Bot
 
 data LispError = NumArgs Int (List LispVal)
                | TypeMismatch String LispVal
@@ -56,6 +57,7 @@ data LispError = NumArgs Int (List LispVal)
                | PatternFail
                | ConditionalFail
                | Default String
+               | Crash
 
 data Op = Add | Sub | Mul | Div
 
@@ -92,6 +94,7 @@ instance showLispVal :: Show LispVal where
                 Nothing -> ""
                 Just arg -> " . " ++ arg) ++ ") ... )"
   show (EffFunc _) = "<IO primitive>"
+  show Bot = "⊥"
 
 instance eqLispVal :: Eq LispVal where
   eq (Atom p) (Atom q) = p == q
@@ -103,7 +106,20 @@ instance eqLispVal :: Eq LispVal where
   eq (Frac p) (Frac q) = p == q
   eq (String s) (String s') = s == s'
   eq (Bool b) (Bool b') = b == b'
+  eq Bot Bot = true
   eq _ _ = false
+
+instance ordLispVal :: Ord LispVal where
+  compare (Atom p) (Atom q) = compare p q
+  compare (Int n) (Int m) = compare n m
+  compare (Float n) (Float m) = compare n m
+  compare (Frac p) (Frac q) = compare (frac2num p) (frac2num q)
+  compare (String s) (String s') = compare s s'
+  compare (Bool b) (Bool b') = compare b b'
+  compare (List xs) (List ys) = compare xs ys
+  compare (DottedList xs x) (DottedList ys y) = compare (compare x y) (compare xs ys)
+  compare (Vector xs) (Vector ys) = compare xs ys
+  compare Bot _ = LT
 
 instance showLispError :: Show LispError where
   show (NumArgs expected found) = "Expected " ++ show expected ++ " args, found values " ++ unwordsList found
@@ -112,8 +128,8 @@ instance showLispError :: Show LispError where
   show (BadSpecialForm msg form) = msg ++ ": " ++ show form
   show (NotFunction msg func) = msg ++ ": " ++ func
   show (UnboundedVar msg varname) = msg ++ ": " ++ varname
-  show (PatternFail) = "Pattern match fail. Perhaps you didn't include an `else` clause?"
-  show (ConditionalFail) = "Conditional fail. Perhaps you didn't include an `else` clause?"
+  show PatternFail = "Pattern match fail. Perhaps you didn't include an `else` clause?"
+  show ConditionalFail = "Conditional fail. Perhaps you didn't include an `else` clause?"
 
 instance lispError :: Error LispError where
   noMsg = Default "An error has occurred"
