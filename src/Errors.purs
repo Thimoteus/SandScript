@@ -32,6 +32,8 @@ instance showLangError :: Show LangError where
 
 type ThrowsError a = Either LangError a
 
+type Eval a = List WFF -> ThrowsError a
+
 trapError :: ThrowsError String -> ThrowsError String
 trapError action = catchError action ((pure <<< show) :: LangError -> ThrowsError String)
 
