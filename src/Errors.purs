@@ -19,6 +19,7 @@ data LangError = NumArgs Int (List WFF)
                | BadSpecialForm String WFF
                | NotFunction String String
                | UnboundVar String String
+               | SetImmutable String
                | Default String
 
 instance showLangError :: Show LangError where
@@ -28,6 +29,7 @@ instance showLangError :: Show LangError where
   show (BadSpecialForm msg form) = msg <> ": " <> show form
   show (NotFunction msg f) = msg <> ": " <> show f
   show (UnboundVar msg v) = msg <> ": " <> show v
+  show (SetImmutable v) = "Trying to set multiple values for " <> v
   show (Default s) = s
 
 type ThrowsError a = Either LangError a

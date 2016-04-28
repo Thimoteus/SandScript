@@ -4,6 +4,7 @@ import Prelude
 
 import SandScript.AST (WFF(..))
 import SandScript.Errors (LangError(..), ThrowsError, Eval)
+import SandScript.Env (State, liftState, defineVar, getVar)
 
 import Data.StrMap as Map
 import Data.List as List
@@ -15,17 +16,19 @@ import Control.Monad.Error.Class (throwError)
 
 infixr 5 List.Cons as :
 
-eval :: WFF -> ThrowsError WFF
+eval :: forall m. Monad m => WFF -> State m WFF
 eval v@(String _) = pure v
 eval n@(Integer _) = pure n
 eval b@(Bool _) = pure b
+eval (Atom i) = getVar i
 eval (List (Atom "quote" : q : List.Nil)) = pure q
+eval (List (Atom "def" : Atom v : form : List.Nil)) = eval form >>= defineVar v
 eval (List (Atom "if" : pred : conseq : alt : List.Nil)) = evalIf pred conseq alt
-eval (List (Atom f : args)) = traverse eval args >>= apply f
+eval (List (Atom f : args)) = traverse eval args >>= liftState <<< applyFn f
 eval bsf = throwError $ BadSpecialForm "Unrecognized special form" bsf
 
-apply :: String -> Eval WFF
-apply f args = maybe
+applyFn :: String -> Eval WFF
+applyFn f args = maybe
   (throwError $ NotFunction "Unrecognized primitive function args" f)
   (_ $ args)
   (Map.lookup f primitives)
@@ -103,7 +106,7 @@ strBoolBinop = boolBinop unpackStr
 intBoolBinop :: Int ~~> Boolean -> Eval WFF
 intBoolBinop = boolBinop unpackInt
 
-evalIf :: WFF -> WFF -> WFF -> ThrowsError WFF
+evalIf :: forall m. Monad m => WFF -> WFF -> WFF -> State m WFF
 evalIf p c a =
   eval p >>= case _ of
                   (Bool b) -> if b then eval c else eval a
@@ -138,7 +141,7 @@ eqv (DotList xs x : DotList ys y : List.Nil) =
   eqv $ (List (x : xs)) : (List (y : ys)) : List.Nil
 eqv (List xs : List ys : List.Nil) =
   allEq xs ys
-eqv _ = throwError $ Default "fuck"
+eqv _ = throwError $ Default "Cannot call eqv in this context"
 
 dumbEq :: forall a. Eq a => a -> a -> ThrowsError WFF
 dumbEq x y = pure $ Bool $ x == y
