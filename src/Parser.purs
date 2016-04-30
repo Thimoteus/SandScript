@@ -2,8 +2,7 @@ module SandScript.Parser where
 
 import Prelude
 
-import SandScript.AST (WFF(..))
-import SandScript.Errors (ThrowsError, LangError(..))
+import SandScript.AST (WFF(..), ThrowsError, LangError(..))
 
 import Data.Either (Either(..))
 import Data.List as L
