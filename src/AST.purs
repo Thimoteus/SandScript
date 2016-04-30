@@ -19,7 +19,6 @@ data WFF = Atom String
          | String String
          | Bool Boolean
          | List (List WFF)
-         | DotList (List WFF) WFF
          | PrimitiveFunc (PrimFn WFF)
          | Func { params :: List String
                 , vararg :: Maybe String
@@ -34,7 +33,6 @@ instance showWFF :: Show WFF where
   show (Bool true) = "True"
   show (Bool _) = "False"
   show (List xs) = "(" <> unwordsList xs <> ")"
-  show (DotList xs x) = "(" <> unwordsList xs <> " . " <> show x <> ")"
   show (PrimitiveFunc _) = "<primitive>"
   show (Func _) = "function"
 
@@ -53,7 +51,7 @@ data LangError = NumArgs Int (List WFF)
 instance showLangError :: Show LangError where
   show (NumArgs n xs) = "Expected " <> show n <> " args, found values " <> unwordsList xs
   show (TypeMismatch s wff) = "Invalid type: expected " <> s <> " but found " <> show wff
-  show (ParseErr (ParseError e)) = "Parse error at " <> e.message
+  show (ParseErr (ParseError e)) = "Parse error: " <> e.message
   show (BadSpecialForm msg form) = msg <> ": " <> show form
   show (NotFunction msg f) = msg <> ": " <> f
   show (UnboundVar msg v) = msg <> ": " <> v

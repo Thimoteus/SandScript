@@ -39,7 +39,13 @@ defineVar key val = do
 
 bindVars :: List (Tuple String WFF) -> Env -> Env
 bindVars xs = Map.union $ Map.fromList xs
-{-- bindVars env = (_ `Map.union` env) <<< Map.fromList --}
+
+retainState :: forall m a. Monad m => State m a -> State m a
+retainState sa = do
+  env :: Env <- get
+  a <- sa
+  put env
+  pure a
 
 liftThrows :: forall a m e. MonadError e m => Either e a -> m a
 liftThrows (Right v) = pure v
