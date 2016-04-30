@@ -4,31 +4,36 @@ A lisp-like language that runs on node, written in Purescript (which is written 
 
 # Using
 
-First make sure you have purescript (>= 0.7.0) and pulp (>= 4.0.2) installed, as well as node and npm.
+First make sure you have purescript (>= 0.8.5) and pulp (>= 8.1.0) installed, as well as node, npm and bower.
 
-Run `pulp dep install` and `npm install`, then `pulp run` to get a REPL.
+Run `bower install` then `pulp run --interactive` to get a REPL.
 
-Alternatively, you can run a file with `pulp run --run filename`.
+Alternatively, you can interpret a file with `pulp run $(cat <filename>)`.
 
 ## Building the interpreter
 
 ```bash
-pulp build --optimise --to sandscript.js
-sed -i '1s/^/#!\/usr\/bin\/env node\n/' sandscript.js
-chmod +x sandscript.js
+pulp build --optimise --to ssc.js
+sed -i '1s/^/#!\/usr\/bin\/env node\n/' ssc.js
+chmod +x ssc.js
 ```
 
 # Syntax
 
 Everything is an [S-expression](https://en.wikipedia.org/wiki/S-expression). [Quoted lists](http://stackoverflow.com/questions/134887/when-to-use-quote-in-lisp) are supported.
 
-Defining variables is done with `def`, and bound variables can be rebound with `set`.
+Values are immutable.
 
-Defining functions is similar to defining a variable, for an example, see the `lang/Examples` folder.
+Defining variables is done with `def`: `(def x 3)`
 
-## Highlighting
+Defining functions is similar:
 
-SandScript shares many names with Clojure, so setting your favorite text editor to highlight SandScript files as Clojure may provide a better experience.
+```lisp
+(def (f x y) (+ x y)
+
+(def (compose f g)
+  (lambda (x) (f (g x))))
+```
 
 # Semantics
 
@@ -38,10 +43,23 @@ Primitive types come in the following flavors:
 
 1. Atoms => 'atom
 2. Strings => "hello world"
-3. Bools => true, false
-4. Ints => 2, ~2
-5. Floats => 3.14, ~3.14
-6. Fracs => 2/3, ~2/3
-7. Complex => 1.0+0.0i, ~0.5+~3.14i
+3. Bools => True, False
+4. Ints => 2, -2
 
-There are three types of collections: (linked) lists, [dotted lists](http://stackoverflow.com/questions/8358783/what-was-a-reason-to-introduce-dotted-pair-in-lisp) and arrays, all of which are heterogeneous.
+There's one type of collection, a linked list. List literals can be made as follows: `'(1 True "string")`.
+
+# Hacking
+
+While based on [Write Yourself A Scheme](https://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours),
+there are quite a few differences:
+
+1. Instead of using Refs to store the environment, the environment is stored in a StateT transformer monad.
+2. Instead of using an association list as the environment, StrMaps are used
+3. No support for dotted lists
+4. "IO primitives" are handled by the REPL as directives instead of given as language primitives.
+
+In particular, the base monad for the transformer stack is left polymorphic:
+The REPL uses Aff to deal with user input, and the source-code file interpreter uses Eff.
+In principle this means one could use, for example, the Trampoline monad at the base to
+handle stack overflows in the language (which were a serious problem in a previous version),
+though I haven't tested this yet.
