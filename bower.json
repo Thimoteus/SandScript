@@ -14,9 +14,11 @@
     "purescript-coercible": "^2.0.0",
     "purescript-parsing": "^0.8.0",
     "purescript-maps": "^0.5.7",
-    "purescript-partial": "^1.1.0",
+    "purescript-partial": "^1.1.1",
     "purescript-aff": "^0.16.1",
-    "purescript-pux": "^4.0.1"
+    "purescript-pux": "^4.0.1",
+    "purescript-free": "^0.9.1",
+    "purescript-pux-css": "^1.0.0"
   },
   "devDependencies": {
     "purescript-console": "^0.1.1",

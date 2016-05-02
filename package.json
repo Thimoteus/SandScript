@@ -23,5 +23,9 @@
   "bugs": {
     "url": "https://github.com/Thimoteus/SandScript/issues"
   },
-  "homepage": "https://github.com/Thimoteus/SandScript#readme"
+  "homepage": "https://github.com/Thimoteus/SandScript#readme",
+  "dependencies": {
+    "react": "^15.0.2",
+    "react-dom": "^15.0.2"
+  }
 }

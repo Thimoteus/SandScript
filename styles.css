@@ -1,0 +1,30 @@
+body {
+  background: #141414;
+  font-family: source-code-pro, mono;
+  font-size: 0.9em;
+  color: #67c8ff;
+}
+
+#main {
+  width: 900px;
+}
+
+#input {
+  background: #141414;
+  border: none;
+  outline: 0;
+  animation: blink-empty 1s infinite;
+  border-left: transparent solid 1px;
+  margin: 5px;
+  width: 800px;
+  color: #67c8ff;
+}
+
+@keyframes blink-empty {
+  50% { border-left: 1px solid #333;}
+}
+
+.repln {
+  margin: 2px 0;
+  white-space: nowrap;
+}
