@@ -22,9 +22,8 @@ repl :: forall e. Eff (ReplEff e) Unit
 repl = runAff (Console.log <<< message) pure runRepl
 
 runOne :: forall e. String -> Eff ( console :: Console.CONSOLE | e ) Unit
-runOne input = do
-  res <- runComputations primitiveFuncs input
-  case res of
+runOne input = runComputations primitiveFuncs input >>=
+  case _ of
        Left err -> Console.error $ show err
        Right (Tuple _ wff) -> Console.print wff
 
