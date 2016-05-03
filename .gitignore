@@ -3,6 +3,7 @@ bower_components/
 output/
 node_modules
 
+*.webpack.js
 *~
 *.swp
 *.swo

@@ -90,7 +90,8 @@ evalHead xs = throwError $ NumArgs 1 xs
 
 evalTail :: PrimFn WFF
 evalTail ((List (_ : xs)) : List.Nil) = pure $ List xs
-evalTail (ba : List.Nil) = throwError $ TypeMismatch "pair" ba
+evalTail ((List List.Nil) : List.Nil) = pure $ List List.Nil
+evalTail (ba : List.Nil) = throwError $ TypeMismatch "list" ba
 evalTail xs = throwError $ NumArgs 1 xs
 
 evalCons :: PrimFn WFF

@@ -5,17 +5,18 @@ import Prelude
 import SandScript.Env (Env)
 import SandScript.Eval (runComputation, runComputations, primitiveFuncs)
 
+import Control.Coercible (coerce)
 import Control.Monad.Aff (Aff, makeAff, attempt)
 import Control.Monad.Aff.Console (print, log)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, error, message)
+import Control.Monad.Eff.Random (RANDOM, randomInt)
 import Control.Monad.Error.Class (throwError)
-import Control.Coercible (coerce)
 
-import Data.Array (intersect, replicate)
+import Data.Array (intersect, replicate, (!!))
 import Data.Either (Either(Right, Left))
-import Data.Maybe (Maybe, maybe)
+import Data.Maybe (Maybe, maybe, fromMaybe')
 import Data.String (indexOf, drop, toCharArray, length)
 import Data.Tuple (Tuple(..), fst)
 import Data.StrMap (StrMap, toList, union)
@@ -39,7 +40,7 @@ data SSCiDirective = Help
 
 data SSCiShow = Environment
 
-type ReplEff e = ( console :: CONSOLE, readline :: RL.READLINE, err :: EXCEPTION, fs :: FS | e )
+type ReplEff e = ( console :: CONSOLE, readline :: RL.READLINE, err :: EXCEPTION, fs :: FS, random :: RANDOM | e )
 
 type Interface = RL.Interface
 
@@ -61,7 +62,9 @@ readLine i = makeAff $ const $ RL.setLineHandler i
 runRepl :: forall e. Aff (ReplEff e) Unit
 runRepl = do
   interface <- createInterface
-  log sandScript
+  i <- liftEff $ randomInt 0 2
+  log $ fromMaybe' (\_ -> defaulttext) $ asciitexts !! i
+  log ":? to see available commands"
   setPrompt ">> " 2 interface
   prompt interface
   repl primitiveFuncs interface
@@ -94,11 +97,11 @@ repl env int = do
 
 matchDirectives :: String -> SSCiDirective
 matchDirectives s
-  | s ⊆ "help" = Help
-  | s ⊆ "quit" = Quit
-  | s ⊆ "reset" = Reset
-  | s ⊆ "show environment" = Show Environment
-  | "load " ⊆ s = Load $ drop 5 s
+  | s `isSubstring` "help" = Help
+  | s `isSubstring` "quit" = Quit
+  | s `isSubstring` "reset" = Reset
+  | s `isSubstring` "show environment" = Show Environment
+  | "load " `isSubstring` s = Load $ drop 5 s
 matchDirectives "?" = Help
 matchDirectives s = UnknownDirective s
 
@@ -114,8 +117,6 @@ isSubstring sub sup =
   let subA = toCharArray sub
       supA = toCharArray sup
    in intersect subA supA == subA
-
-infix 0 isSubstring as ⊆
 
 readFile :: forall e. String -> Aff (ReplEff e) String
 readFile file =
@@ -138,7 +139,7 @@ pprintEnv xs =
       longestKey = maybe "" fst longestKeyM
       l = length longestKey + 5
       stringify (Tuple k v) = k <> duplicate (l - length k) ' ' <> show v
-   in intercalate "\n" $ map stringify $ filter (\(Tuple _ v) -> not ("<primitive>" ⊆ show v)) list
+   in intercalate "\n" $ map stringify $ filter (\(Tuple _ v) -> not ("<primitive>" `isSubstring` show v)) list
 
 duplicate :: Int -> Char -> String
 duplicate n c = coerce $ replicate n c
@@ -151,35 +152,39 @@ Commands:
 
 :h, :?      -- prints this message
 :show env   -- list the current identifiers and definitions
+:load file  -- load all definitions from a file
 :reset      -- unbind all user-defined atoms
 :q          -- quit SSCi
 <x>         -- evaluate <x> as a SandScript expression
 """
 
-sandScript :: String
-sandScript = """
-  ()  _,         _|   ()  _   ,_  o    _|_
-  /\ / |  /|/|  / |   /\ /   /  | | |/\_|
- /(_)\/|_/ | |_/\/|_//(_)\__/   |/|/|_/ |_/
-                                   (|
-:? to see available commands
+asciitexts :: Array String
+asciitexts = [defaulttext, ascii1, ascii2]
+
+defaulttext :: String
+defaulttext = """
+ ()  _,         _|   ()  _   ,_  o    _|_
+ /\ / |  /|/|  / |   /\ /   /  | | |/\_|
+/(_)\/|_/ | |_/\/|_//(_)\__/   |/|/|_/ |_/
+                                  (|
 """
---  __             __              
--- / _| _    _  ||/ _| _ _ () _ || 
--- \_ \/o\ |/ \/o|\_ \///_|||/o\| ]
--- |__/\_,]L_n|\_||__/\\L| L||_/L| 
---                           L|    
---  ____                         __  ____                               __      
--- /\  _`\                      /\ \/\  _`\                  __        /\ \__   
--- \ \,\L\_\     __      ___    \_\ \ \,\L\_\    ___   _ __ /\_\  _____\ \ ,_\  
---  \/_\__ \   /'__`\  /' _ `\  /'_` \/_\__ \   /'___\/\`'__\/\ \/\ '__`\ \ \/  
---    /\ \L\ \/\ \L\.\_/\ \/\ \/\ \L\ \/\ \L\ \/\ \__/\ \ \/ \ \ \ \ \L\ \ \ \_ 
---    \ `\____\ \__/.\_\ \_\ \_\ \___,_\ `\____\ \____\\ \_\  \ \_\ \ ,__/\ \__\
---     \/_____/\/__/\/_/\/_/\/_/\/__,_ /\/_____/\/____/ \/_/   \/_/\ \ \/  \/__/
---                                                                  \ \_\       
---                                                                   \/_/       
-                                           
---   ()  _,         _|   ()  _   ,_  o    _|_ 
---   /\ / |  /|/|  / |   /\ /   /  | | |/\_|  
---  /(_)\/|_/ | |_/\/|_//(_)\__/   |/|/|_/ |_/
---                                    (|      
+ascii1 :: String
+ascii1 = """
+ __             __
+/ _| _    _  ||/ _| _ _ () _ ||
+\_ \/o\ |/ \/o|\_ \///_|||/o\| ]
+|__/\_,]L_n|\_||__/\\L| L||_/L|
+                          L|
+"""
+ascii2 :: String
+ascii2 = """
+ ____                         __  ____                               __
+/\  _`\                      /\ \/\  _`\                  __        /\ \__
+\ \,\L\_\     __      ___    \_\ \ \,\L\_\    ___   _ __ /\_\  _____\ \ ,_\
+ \/_\__ \   /'__`\  /' _ `\  /'_` \/_\__ \   /'___\/\`'__\/\ \/\ '__`\ \ \/
+   /\ \L\ \/\ \L\.\_/\ \/\ \/\ \L\ \/\ \L\ \/\ \__/\ \ \/ \ \ \ \ \L\ \ \ \_
+   \ `\____\ \__/.\_\ \_\ \_\ \___,_\ `\____\ \____\\ \_\  \ \_\ \ ,__/\ \__\
+    \/_____/\/__/\/_/\/_/\/_/\/__,_ /\/_____/\/____/ \/_/   \/_/\ \ \/  \/__/
+                                                                 \ \_\
+                                                                  \/_/
+"""

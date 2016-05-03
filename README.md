@@ -48,6 +48,32 @@ Primitive types come in the following flavors:
 
 There's one type of collection, a linked list. List literals can be made as follows: `'(1 True "string")`.
 
+# Builtin functions:
+
+1. `+` add 2 or more numbers
+2. `-` subtract 2 or more numbers
+3. `*` multiply 2 or more numbers
+4. `/` divide 2 or more numbers
+5. `%` mod 2 or more numbers
+6. `=` check equality between numbers
+7. `<` check if the first number is less than the second
+8. `>` check if the first number is greater than the second
+9. `<=` check if the first number is greater than the second
+10. `>=` check if the first number is less than the second
+11. `/=` check equality between numbers
+12. `&&` truth-functional and
+13. `||` truth-functional or
+14. `string=?` check equality between strings
+15. `string>?` check if the first string is greater than the second
+16. `string<?` check if the first string is less than the second
+17. `string>=?` check if the first string is less than the second
+18. `string<=?` check if the first string is greater than the second
+19. `head` get the first element in a nonempty list
+20. `tail` get the tail of a list
+21. `cons` add an element to the front of the given list
+22. `eqv` check equality of two terms of the same type
+23. `==` same as `eqv`
+
 # Hacking
 
 While based on [Write Yourself A Scheme](https://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours),
