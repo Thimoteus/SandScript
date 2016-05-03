@@ -1,9 +1,10 @@
 .psci*
-*.webpack.js
 bower_components/
 output/
 node_modules
 
+ssc.js
+*.webpack.js
 *~
 *.swp
 *.swo

@@ -6,7 +6,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "pulp test"
+    "test": "pulp test",
+    "build": "pulp build --optimise --to ssc.js && sed -i '1s\/^\/#!\\/usr\\/bin\\/env node\\n/' ssc.js && chmod +x ssc.js"
   },
   "repository": {
     "type": "git",
