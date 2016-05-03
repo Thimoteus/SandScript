@@ -89,7 +89,7 @@ duplicate n c = coerce $ replicate n c
 
 help :: String
 help = """
-A Web REPL for SandScript
+A Web REPL for SandScript -- github.com/thimoteus/SandScript
 
 Commands:
 
@@ -112,4 +112,5 @@ asciiart = """
 . ######:: ##:::: ##: ##::. ##: ########::. ######::. ######:: ##:::. ##:'####: ##::::::::::: ##::::
 :......:::..:::::..::..::::..::........::::......::::......:::..:::::..::....::..::::::::::::..:::::
 :? to see available commands
+github.com/thimoteus/SandScript for source
 """
