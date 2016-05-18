@@ -33315,14 +33315,14 @@ var makeFunc = function (dictMonad) {
                         body: body, 
                         closure: closure
                     });
-                    var $34 = Data_Foldable.or(Data_Foldable.foldableArray)(Prelude.booleanAlgebraBoolean)([ someNonAtom(params), Data_List["null"](body) ]);
-                    if ($34) {
+                    var $33 = Data_Foldable.or(Data_Foldable.foldableArray)(Prelude.booleanAlgebraBoolean)([ someNonAtom(params), Data_List["null"](body) ]);
+                    if ($33) {
                         return Control_Monad_Error_Class.throwError(Control_Monad_State_Trans.monadErrorStateT(Control_Monad_Except_Trans.monadErrorExceptT(dictMonad)))(new SandScript_AST.NotFunction("Not a function", "Function was ill defined"));
                     };
-                    if (!$34) {
+                    if (!$33) {
                         return Prelude.pure(Control_Monad_State_Trans.applicativeStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad)))(f);
                     };
-                    throw new Error("Failed pattern match at SandScript.Eval line 95, column 7 - line 99, column 1: " + [ $34.constructor.name ]);
+                    throw new Error("Failed pattern match at SandScript.Eval line 95, column 7 - line 99, column 1: " + [ $33.constructor.name ]);
                 };
             };
         };
@@ -33332,10 +33332,8 @@ var makeNormalFunc = function (dictMonad) {
     return makeFunc(dictMonad)(Data_Maybe.Nothing.value);
 };
 var makeVarArgs = function (dictMonad) {
-    return function (dictShow) {
-        return function ($135) {
-            return makeFunc(dictMonad)(Data_Maybe.Just.create(Prelude.show(dictShow)($135)));
-        };
+    return function ($134) {
+        return makeFunc(dictMonad)(Data_Maybe.Just.create(Prelude.show(SandScript_AST.showWFF)($134)));
     };
 };
 var mapply = function (dictMonad) {
@@ -33348,14 +33346,14 @@ var mapply = function (dictMonad) {
                 var numParams = Data_List.length(v.value0.params);
                 var remainingArgs = Data_List.drop(numParams)(v1);
                 var modifiedEval = function (cls) {
-                    return function ($136) {
-                        return Control_Monad_State_Trans.withStateT(Data_StrMap.union(cls))($$eval(dictMonad)($136));
+                    return function ($135) {
+                        return Control_Monad_State_Trans.withStateT(Data_StrMap.union(cls))($$eval(dictMonad)($135));
                     };
                 };
-                var getLast = function ($137) {
+                var getLast = function ($136) {
                     return Data_Maybe["maybe'"](function (v2) {
                         return Control_Monad_Error_Class.throwError(Control_Monad_State_Trans.monadErrorStateT(Control_Monad_Except_Trans.monadErrorExceptT(dictMonad)))(new SandScript_AST.NotFunction("Not a function", "Needs a nonempty body"));
-                    })(Prelude.pure(Control_Monad_State_Trans.applicativeStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad))))(Data_List.last($137));
+                    })(Prelude.pure(Control_Monad_State_Trans.applicativeStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad))))(Data_List.last($136));
                 };
                 var evalEach = function (cls) {
                     return Data_Traversable.traverse(Data_List.traversableList)(Control_Monad_State_Trans.applicativeStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad)))(modifiedEval(cls))(v.value0.body);
@@ -33369,14 +33367,14 @@ var mapply = function (dictMonad) {
                     };
                     return Prelude.id(Prelude.categoryFn);
                 };
-                var $41 = numParams !== Data_List.length(v1);
-                if ($41) {
+                var $40 = numParams !== Data_List.length(v1);
+                if ($40) {
                     return Control_Monad_Error_Class.throwError(Control_Monad_State_Trans.monadErrorStateT(Control_Monad_Except_Trans.monadErrorExceptT(dictMonad)))(new SandScript_AST.NumArgs(numParams, v1));
                 };
-                if (!$41) {
+                if (!$40) {
                     return SandScript_Env.retainState(dictMonad)(evalBody(bindVarArgs(v.value0.vararg)(SandScript_Env.bindVars(Data_List.zip(v.value0.params)(v1))(v.value0.closure))));
                 };
-                throw new Error("Failed pattern match at SandScript.Eval line 84, column 7 - line 87, column 1: " + [ $41.constructor.name ]);
+                throw new Error("Failed pattern match at SandScript.Eval line 84, column 7 - line 87, column 1: " + [ $40.constructor.name ]);
             };
             return Control_Monad_Error_Class.throwError(Control_Monad_State_Trans.monadErrorStateT(Control_Monad_Except_Trans.monadErrorExceptT(dictMonad)))(new SandScript_AST.NotFunction("Expecting a function", Prelude.show(SandScript_AST.showWFF)(v) + " is not a function"));
         };
@@ -33445,12 +33443,12 @@ var $$eval = function (dictMonad) {
         };
         if (v instanceof SandScript_AST.List && (v.value0 instanceof Data_List.Cons && (v.value0.value0 instanceof SandScript_AST.Atom && (v.value0.value0.value0 === "lambda" && (v.value0.value1 instanceof Data_List.Cons && v.value0.value1.value0 instanceof SandScript_AST.Atom))))) {
             return Prelude.bind(Control_Monad_State_Trans.bindStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad)))(Control_Monad_State_Class.get(Control_Monad_State_Trans.monadStateStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad))))(function (v1) {
-                return makeVarArgs(dictMonad)(Data_List.showList(SandScript_AST.showWFF))(v.value0.value1)(v1)(Data_List.Nil.value)(v.value0.value1.value1);
+                return makeVarArgs(dictMonad)(v.value0.value1.value0)(v1)(Data_List.Nil.value)(v.value0.value1.value1);
             });
         };
         if (v instanceof SandScript_AST.List && (v.value0 instanceof Data_List.Cons && (v.value0.value0 instanceof SandScript_AST.Atom && (v.value0.value0.value0 === "\u03bb" && (v.value0.value1 instanceof Data_List.Cons && v.value0.value1.value0 instanceof SandScript_AST.Atom))))) {
             return Prelude.bind(Control_Monad_State_Trans.bindStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad)))(Control_Monad_State_Class.get(Control_Monad_State_Trans.monadStateStateT(Control_Monad_Except_Trans.monadExceptT(dictMonad))))(function (v1) {
-                return makeVarArgs(dictMonad)(Data_List.showList(SandScript_AST.showWFF))(v.value0.value1)(v1)(Data_List.Nil.value)(v.value0.value1.value1);
+                return makeVarArgs(dictMonad)(v.value0.value1.value0)(v1)(Data_List.Nil.value)(v.value0.value1.value1);
             });
         };
         if (v instanceof SandScript_AST.List && v.value0 instanceof Data_List.Cons) {
@@ -33479,8 +33477,8 @@ var readEvalMany = function (dictMonad) {
 };
 var runComputations = function (dictMonad) {
     return function (env) {
-        return function ($138) {
-            return SandScript_Env.runState(dictMonad)(env)(readEvalMany(dictMonad)($138));
+        return function ($137) {
+            return SandScript_Env.runState(dictMonad)(env)(readEvalMany(dictMonad)($137));
         };
     };
 };
@@ -33515,50 +33513,103 @@ module.exports = {
     ":": $colon
 };
 
-},{"../Control.Bind":"/home/archurito/Programming/SandScript/output/Control.Bind/index.js","../Control.Monad.Error.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.Error.Class/index.js","../Control.Monad.Except.Trans":"/home/archurito/Programming/SandScript/output/Control.Monad.Except.Trans/index.js","../Control.Monad.State.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.State.Class/index.js","../Control.Monad.State.Trans":"/home/archurito/Programming/SandScript/output/Control.Monad.State.Trans/index.js","../Data.Foldable":"/home/archurito/Programming/SandScript/output/Data.Foldable/index.js","../Data.List":"/home/archurito/Programming/SandScript/output/Data.List/index.js","../Data.Maybe":"/home/archurito/Programming/SandScript/output/Data.Maybe/index.js","../Data.StrMap":"/home/archurito/Programming/SandScript/output/Data.StrMap/index.js","../Data.Traversable":"/home/archurito/Programming/SandScript/output/Data.Traversable/index.js","../Data.Tuple":"/home/archurito/Programming/SandScript/output/Data.Tuple/index.js","../Prelude":"/home/archurito/Programming/SandScript/output/Prelude/index.js","../SandScript.AST":"/home/archurito/Programming/SandScript/output/SandScript.AST/index.js","../SandScript.Env":"/home/archurito/Programming/SandScript/output/SandScript.Env/index.js","../SandScript.Parser":"/home/archurito/Programming/SandScript/output/SandScript.Parser/index.js","../SandScript.Primitives":"/home/archurito/Programming/SandScript/output/SandScript.Primitives/index.js"}],"/home/archurito/Programming/SandScript/output/SandScript.Parser/foreign.js":[function(require,module,exports){
-// module SandScript.Parser
-
-exports.str2int = function (str) {
-  return (str | 0);
-}
-
-},{}],"/home/archurito/Programming/SandScript/output/SandScript.Parser/index.js":[function(require,module,exports){
+},{"../Control.Bind":"/home/archurito/Programming/SandScript/output/Control.Bind/index.js","../Control.Monad.Error.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.Error.Class/index.js","../Control.Monad.Except.Trans":"/home/archurito/Programming/SandScript/output/Control.Monad.Except.Trans/index.js","../Control.Monad.State.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.State.Class/index.js","../Control.Monad.State.Trans":"/home/archurito/Programming/SandScript/output/Control.Monad.State.Trans/index.js","../Data.Foldable":"/home/archurito/Programming/SandScript/output/Data.Foldable/index.js","../Data.List":"/home/archurito/Programming/SandScript/output/Data.List/index.js","../Data.Maybe":"/home/archurito/Programming/SandScript/output/Data.Maybe/index.js","../Data.StrMap":"/home/archurito/Programming/SandScript/output/Data.StrMap/index.js","../Data.Traversable":"/home/archurito/Programming/SandScript/output/Data.Traversable/index.js","../Data.Tuple":"/home/archurito/Programming/SandScript/output/Data.Tuple/index.js","../Prelude":"/home/archurito/Programming/SandScript/output/Prelude/index.js","../SandScript.AST":"/home/archurito/Programming/SandScript/output/SandScript.AST/index.js","../SandScript.Env":"/home/archurito/Programming/SandScript/output/SandScript.Env/index.js","../SandScript.Parser":"/home/archurito/Programming/SandScript/output/SandScript.Parser/index.js","../SandScript.Primitives":"/home/archurito/Programming/SandScript/output/SandScript.Primitives/index.js"}],"/home/archurito/Programming/SandScript/output/SandScript.Parser.Common/index.js":[function(require,module,exports){
 // Generated by psc version 0.8.5.0
 "use strict";
-var $foreign = require("./foreign");
 var Prelude = require("../Prelude");
+var Control_Alt = require("../Control.Alt");
+var Control_Apply = require("../Control.Apply");
+var Control_Coercible = require("../Control.Coercible");
 var Data_List = require("../Data.List");
+var Data_String = require("../Data.String");
+var Data_Int = require("../Data.Int");
+var Data_Maybe = require("../Data.Maybe");
+var Text_Parsing_Parser = require("../Text.Parsing.Parser");
+var Text_Parsing_Parser_Combinators = require("../Text.Parsing.Parser.Combinators");
+var Text_Parsing_Parser_String = require("../Text.Parsing.Parser.String");
+var Data_Identity = require("../Data.Identity");
+var str2int = function ($9) {
+    return Data_Maybe.fromMaybe(0)(Data_Int.fromString($9));
+};
+var simpleSpace = Text_Parsing_Parser_Combinators.skipMany1(Data_Identity.monadIdentity)(Text_Parsing_Parser_String.satisfy(Data_Identity.monadIdentity)(function (c) {
+    return c === " " || (c === "\n" || (c === "\r" || c === "\t"));
+}));
+var sign = Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Control_Apply["*>"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("-"))(Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Prelude.negate(Prelude.ringInt))))(Control_Apply["*>"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("+"))(Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Prelude.id(Prelude.categoryFn)))))(Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Prelude.id(Prelude.categoryFn)));
+var oneLineComment = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_Combinators["try"](Data_Identity.functorIdentity)(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)(";")))(function () {
+    return Text_Parsing_Parser_Combinators.skipMany(Data_Identity.monadIdentity)(Text_Parsing_Parser_String.satisfy(Data_Identity.monadIdentity)(function (v) {
+        return v !== "\n";
+    }));
+});
+var whiteSpace = Text_Parsing_Parser_Combinators.skipMany(Data_Identity.monadIdentity)(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(simpleSpace)(oneLineComment));
+var many1 = function (p) {
+    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(p)(function (v) {
+        return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(p))(function (v1) {
+            return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Data_List[":"](v)(v1));
+        });
+    });
+};
+var lexeme = function (p) {
+    return Control_Apply["<*"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(p)(whiteSpace);
+};
+var symbol = function ($10) {
+    return lexeme(Text_Parsing_Parser_String.string(Data_Identity.monadIdentity)($10));
+};
+var anyOf = function (s) {
+    return Text_Parsing_Parser_String.satisfy(Data_Identity.monadIdentity)(function (c) {
+        return Data_String.contains(Control_Coercible.coerce(Control_Coercible.coercibleCharString)(c))(s);
+    });
+};
+var anyLetter = anyOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+var anyDigit = anyOf("0123456789");
+var $$int = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(sign)(function (v) {
+    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(many1(anyDigit))(function (v1) {
+        return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(v(str2int(Control_Coercible.coerce(Control_Coercible.coercableListCharString)(v1))));
+    });
+});
+module.exports = {
+    str2int: str2int, 
+    sign: sign, 
+    "int": $$int, 
+    anyDigit: anyDigit, 
+    anyLetter: anyLetter, 
+    many1: many1, 
+    anyOf: anyOf, 
+    symbol: symbol, 
+    lexeme: lexeme, 
+    oneLineComment: oneLineComment, 
+    simpleSpace: simpleSpace, 
+    whiteSpace: whiteSpace
+};
+
+},{"../Control.Alt":"/home/archurito/Programming/SandScript/output/Control.Alt/index.js","../Control.Apply":"/home/archurito/Programming/SandScript/output/Control.Apply/index.js","../Control.Coercible":"/home/archurito/Programming/SandScript/output/Control.Coercible/index.js","../Data.Identity":"/home/archurito/Programming/SandScript/output/Data.Identity/index.js","../Data.Int":"/home/archurito/Programming/SandScript/output/Data.Int/index.js","../Data.List":"/home/archurito/Programming/SandScript/output/Data.List/index.js","../Data.Maybe":"/home/archurito/Programming/SandScript/output/Data.Maybe/index.js","../Data.String":"/home/archurito/Programming/SandScript/output/Data.String/index.js","../Prelude":"/home/archurito/Programming/SandScript/output/Prelude/index.js","../Text.Parsing.Parser":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser/index.js","../Text.Parsing.Parser.Combinators":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.Combinators/index.js","../Text.Parsing.Parser.String":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.String/index.js"}],"/home/archurito/Programming/SandScript/output/SandScript.Parser/index.js":[function(require,module,exports){
+// Generated by psc version 0.8.5.0
+"use strict";
+var Prelude = require("../Prelude");
 var Control_Alt = require("../Control.Alt");
 var Control_Apply = require("../Control.Apply");
 var Control_Coercible = require("../Control.Coercible");
 var Control_Lazy = require("../Control.Lazy");
 var Control_Monad_Error_Class = require("../Control.Monad.Error.Class");
 var Data_Either = require("../Data.Either");
-var Data_String = require("../Data.String");
+var Data_List = require("../Data.List");
 var SandScript_AST = require("../SandScript.AST");
+var SandScript_Parser_Common = require("../SandScript.Parser.Common");
 var Text_Parsing_Parser = require("../Text.Parsing.Parser");
 var Text_Parsing_Parser_Combinators = require("../Text.Parsing.Parser.Combinators");
 var Text_Parsing_Parser_String = require("../Text.Parsing.Parser.String");
 var Data_Identity = require("../Data.Identity");
 var Data_Foldable = require("../Data.Foldable");
 var $colon = Data_List.Cons.create;
-var skipComment = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)(";"))(function () {
-    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_Combinators.many1Till(Data_Identity.monadIdentity)(Text_Parsing_Parser_String.anyChar(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\n")))(function () {
-        return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_Combinators.optional(Data_Identity.monadIdentity)(Text_Parsing_Parser_String.eof(Data_Identity.monadIdentity)))(function () {
-            return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Prelude.unit);
-        });
-    });
-});
 var readOrThrow = function (pwff) {
     return function (input) {
-        var $8 = Text_Parsing_Parser.runParser(input)(pwff);
-        if ($8 instanceof Data_Either.Right) {
-            return Prelude.pure(Data_Either.applicativeEither)($8.value0);
+        var $4 = Text_Parsing_Parser.runParser(input)(pwff);
+        if ($4 instanceof Data_Either.Right) {
+            return Prelude.pure(Data_Either.applicativeEither)($4.value0);
         };
-        if ($8 instanceof Data_Either.Left) {
-            return Control_Monad_Error_Class.throwError(Control_Monad_Error_Class.monadErrorEither)(new SandScript_AST.ParseErr($8.value0));
+        if ($4 instanceof Data_Either.Left) {
+            return Control_Monad_Error_Class.throwError(Control_Monad_Error_Class.monadErrorEither)(new SandScript_AST.ParseErr($4.value0));
         };
-        throw new Error("Failed pattern match at SandScript.Parser line 96, column 26 - line 100, column 1: " + [ $8.constructor.name ]);
+        throw new Error("Failed pattern match at SandScript.Parser line 73, column 26 - line 77, column 1: " + [ $4.constructor.name ]);
     };
 };
 var parseQuoted = function (p) {
@@ -33569,29 +33620,23 @@ var parseQuoted = function (p) {
     });
 };
 var parseList = function (p) {
-    return Prelude["<$>"](Text_Parsing_Parser.functorParserT(Data_Identity.functorIdentity))(SandScript_AST.List.create)(Text_Parsing_Parser_Combinators.sepBy(Data_Identity.monadIdentity)(p)(Text_Parsing_Parser_String.whiteSpace(Data_Identity.monadIdentity)));
+    return Prelude["<$>"](Text_Parsing_Parser.functorParserT(Data_Identity.functorIdentity))(SandScript_AST.List.create)(Text_Parsing_Parser_Combinators.sepBy(Data_Identity.monadIdentity)(p)(SandScript_Parser_Common.whiteSpace));
 };
-var many1 = function (p) {
-    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(p)(function (v) {
-        return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(p))(function (v1) {
-            return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(new Data_List.Cons(v, v1));
+var parseInteger = Prelude["<$>"](Text_Parsing_Parser.functorParserT(Data_Identity.functorIdentity))(SandScript_AST.Integer.create)(SandScript_Parser_Common["int"]);
+var escaped = Control_Apply["*>"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\\"))(SandScript_Parser_Common.anyOf("\\\"\n\r\t"));
+var parseString = Prelude["<$>"](Text_Parsing_Parser.functorParserT(Data_Identity.functorIdentity))(function ($12) {
+    return (SandScript_AST["String"]).create(Control_Coercible.coerce(Control_Coercible.coercableListCharString)($12));
+})(Text_Parsing_Parser_Combinators.between(Data_Identity.monadIdentity)(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\""))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\""))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String.noneOf(Data_Identity.monadIdentity)([ "\"", "\\" ]))(escaped))));
+var anyTill = function (c) {
+    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(Text_Parsing_Parser_String.noneOf(Data_Identity.monadIdentity)([ c ])))(function (v) {
+        return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)(c))(function () {
+            return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(Control_Coercible.coerce(Control_Coercible.coercableListCharString)(v));
         });
     });
 };
-var anyOf = function (s) {
-    return Text_Parsing_Parser_String.satisfy(Data_Identity.monadIdentity)(function (c) {
-        return Data_String.contains(Control_Coercible.coerce(Control_Coercible.coercibleCharString)(c))(s);
-    });
-};
-var escaped = Control_Apply["*>"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\\"))(anyOf("\\\"\n\r\t"));
-var parseString = Prelude["<$>"](Text_Parsing_Parser.functorParserT(Data_Identity.functorIdentity))(function ($20) {
-    return (SandScript_AST["String"]).create(Control_Coercible.coerce(Control_Coercible.coercableListCharString)($20));
-})(Text_Parsing_Parser_Combinators.between(Data_Identity.monadIdentity)(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\""))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("\""))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String.noneOf(Data_Identity.monadIdentity)([ "\"", "\\" ]))(escaped))));
-var symbol = anyOf("!#$%&|*+-/:<=>?@^_~");
-var anyLetter = anyOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-var anyDigit = anyOf("0123456789");
-var parseAtom = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(anyLetter)(symbol))(function (v) {
-    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(anyLetter)(anyDigit))(symbol)))(function (v1) {
+var anySymbol = SandScript_Parser_Common.anyOf("!#$%&|*+-/:<=>?@^_~");
+var parseAtom = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(SandScript_Parser_Common.anyLetter)(anySymbol))(function (v) {
+    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Data_List.many(Text_Parsing_Parser.alternativeParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser.lazyParserT)(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(Control_Alt["<|>"](Text_Parsing_Parser.altParserT(Data_Identity.monadIdentity))(SandScript_Parser_Common.anyLetter)(SandScript_Parser_Common.anyDigit))(anySymbol)))(function (v1) {
         var atom = Control_Coercible.coerce(Control_Coercible.coercableListCharString)(new Data_List.Cons(v, v1));
         return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))((function () {
             if (atom === "True") {
@@ -33604,23 +33649,11 @@ var parseAtom = Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monad
         })());
     });
 });
-var parseInteger = Prelude[">>="](Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_Combinators.lookAhead(Data_Identity.monadIdentity)(Text_Parsing_Parser_String.anyChar(Data_Identity.monadIdentity)))(function (v) {
-    if (v === "-") {
-        return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("-"))(function () {
-            return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(many1(anyDigit))(function (v1) {
-                return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(SandScript_AST.Integer.create($foreign.str2int(Control_Coercible.coerce(Control_Coercible.coercableListCharString)(new Data_List.Cons("-", v1)))));
-            });
-        });
-    };
-    return Prelude.bind(Text_Parsing_Parser.bindParserT(Data_Identity.monadIdentity))(many1(anyDigit))(function (v1) {
-        return Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(SandScript_AST.Integer.create($foreign.str2int(Control_Coercible.coerce(Control_Coercible.coercableListCharString)(v1))));
-    });
-});
 var parseExpr = Control_Lazy.fix(Text_Parsing_Parser.lazyParserT)(function (p) {
-    return Text_Parsing_Parser_Combinators["<?>"](Data_Identity.monadIdentity)(Text_Parsing_Parser_Combinators.choice(Data_Foldable.foldableArray)(Data_Identity.monadIdentity)([ Text_Parsing_Parser_Combinators["try"](Data_Identity.functorIdentity)(parseInteger), parseString, parseAtom, parseQuoted(p), Control_Apply["*>"](Text_Parsing_Parser.applyParserT(Data_Identity.monadIdentity))(skipComment)(Prelude.pure(Text_Parsing_Parser.applicativeParserT(Data_Identity.monadIdentity))(new SandScript_AST["String"](""))), Text_Parsing_Parser_Combinators.between(Data_Identity.monadIdentity)(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)("("))(Text_Parsing_Parser_String["char"](Data_Identity.monadIdentity)(")"))(parseList(p)) ]))("Malformed input");
+    return Text_Parsing_Parser_Combinators["<?>"](Data_Identity.monadIdentity)(Text_Parsing_Parser_Combinators.choice(Data_Foldable.foldableArray)(Data_Identity.monadIdentity)([ Text_Parsing_Parser_Combinators["try"](Data_Identity.functorIdentity)(parseInteger), parseString, parseAtom, parseQuoted(p), Text_Parsing_Parser_Combinators.between(Data_Identity.monadIdentity)(SandScript_Parser_Common.symbol("("))(SandScript_Parser_Common.symbol(")"))(parseList(p)) ]))("well-formed formula");
 });
 var read = readOrThrow(parseExpr);
-var readFile = readOrThrow(Text_Parsing_Parser_Combinators.endBy(Data_Identity.monadIdentity)(parseExpr)(Text_Parsing_Parser_String.whiteSpace(Data_Identity.monadIdentity)));
+var readFile = readOrThrow(Text_Parsing_Parser_Combinators.sepBy(Data_Identity.monadIdentity)(parseExpr)(SandScript_Parser_Common.whiteSpace));
 module.exports = {
     readFile: readFile, 
     read: read, 
@@ -33630,19 +33663,14 @@ module.exports = {
     parseList: parseList, 
     parseInteger: parseInteger, 
     parseAtom: parseAtom, 
-    skipComment: skipComment, 
     parseString: parseString, 
     escaped: escaped, 
-    symbol: symbol, 
-    anyDigit: anyDigit, 
-    anyLetter: anyLetter, 
-    anyOf: anyOf, 
-    many1: many1, 
-    ":": $colon, 
-    str2int: $foreign.str2int
+    anySymbol: anySymbol, 
+    anyTill: anyTill, 
+    ":": $colon
 };
 
-},{"../Control.Alt":"/home/archurito/Programming/SandScript/output/Control.Alt/index.js","../Control.Apply":"/home/archurito/Programming/SandScript/output/Control.Apply/index.js","../Control.Coercible":"/home/archurito/Programming/SandScript/output/Control.Coercible/index.js","../Control.Lazy":"/home/archurito/Programming/SandScript/output/Control.Lazy/index.js","../Control.Monad.Error.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.Error.Class/index.js","../Data.Either":"/home/archurito/Programming/SandScript/output/Data.Either/index.js","../Data.Foldable":"/home/archurito/Programming/SandScript/output/Data.Foldable/index.js","../Data.Identity":"/home/archurito/Programming/SandScript/output/Data.Identity/index.js","../Data.List":"/home/archurito/Programming/SandScript/output/Data.List/index.js","../Data.String":"/home/archurito/Programming/SandScript/output/Data.String/index.js","../Prelude":"/home/archurito/Programming/SandScript/output/Prelude/index.js","../SandScript.AST":"/home/archurito/Programming/SandScript/output/SandScript.AST/index.js","../Text.Parsing.Parser":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser/index.js","../Text.Parsing.Parser.Combinators":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.Combinators/index.js","../Text.Parsing.Parser.String":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.String/index.js","./foreign":"/home/archurito/Programming/SandScript/output/SandScript.Parser/foreign.js"}],"/home/archurito/Programming/SandScript/output/SandScript.Primitives/index.js":[function(require,module,exports){
+},{"../Control.Alt":"/home/archurito/Programming/SandScript/output/Control.Alt/index.js","../Control.Apply":"/home/archurito/Programming/SandScript/output/Control.Apply/index.js","../Control.Coercible":"/home/archurito/Programming/SandScript/output/Control.Coercible/index.js","../Control.Lazy":"/home/archurito/Programming/SandScript/output/Control.Lazy/index.js","../Control.Monad.Error.Class":"/home/archurito/Programming/SandScript/output/Control.Monad.Error.Class/index.js","../Data.Either":"/home/archurito/Programming/SandScript/output/Data.Either/index.js","../Data.Foldable":"/home/archurito/Programming/SandScript/output/Data.Foldable/index.js","../Data.Identity":"/home/archurito/Programming/SandScript/output/Data.Identity/index.js","../Data.List":"/home/archurito/Programming/SandScript/output/Data.List/index.js","../Prelude":"/home/archurito/Programming/SandScript/output/Prelude/index.js","../SandScript.AST":"/home/archurito/Programming/SandScript/output/SandScript.AST/index.js","../SandScript.Parser.Common":"/home/archurito/Programming/SandScript/output/SandScript.Parser.Common/index.js","../Text.Parsing.Parser":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser/index.js","../Text.Parsing.Parser.Combinators":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.Combinators/index.js","../Text.Parsing.Parser.String":"/home/archurito/Programming/SandScript/output/Text.Parsing.Parser.String/index.js"}],"/home/archurito/Programming/SandScript/output/SandScript.Primitives/index.js":[function(require,module,exports){
 // Generated by psc version 0.8.5.0
 "use strict";
 var Prelude = require("../Prelude");
@@ -33995,7 +34023,7 @@ var match = function (s) {
     };
     return new Command(s);
 };
-var help = "\nA Web REPL for SandScript\n\nCommands:\n\n:h, :? ------- prints this message\n:show env ---- list the current identifiers and definitions\n:reset ------- unbind all user-defined atoms\n:q ----------- quit SSCi\n<x> ---------- evaluate <x> as a SandScript expression\n";
+var help = "\nA Web REPL for SandScript -- github.com/thimoteus/SandScript\n\nCommands:\n\n:h, :? ------- prints this message\n:show env ---- list the current identifiers and definitions\n:reset ------- unbind all user-defined atoms\n:q ----------- quit SSCi\n<x> ---------- evaluate <x> as a SandScript expression\n";
 var duplicate = function (n) {
     return function (c) {
         return Control_Coercible.coerce(Control_Coercible.coercibleArrayCharString)(Data_Array.replicate(n)(c));
@@ -34049,7 +34077,7 @@ var repl = function (env) {
         throw new Error("Failed pattern match at SandScript.REPL line 45, column 3 - line 55, column 1: " + [ $28.constructor.name ]);
     };
 };
-var asciiart = "\n:'######:::::'###::::'##::: ##:'########:::'######:::'######::'########::'####:'########::'########:\n'##... ##:::'## ##::: ###:: ##: ##.... ##:'##... ##:'##... ##: ##.... ##:. ##:: ##.... ##:... ##..::\n.##:::..:::'##:. ##:: ####: ##: ##:::: ##: ##:::..:: ##:::..:: ##:::: ##:: ##:: ##:::: ##:::: ##::::\n. ######::'##:::. ##: ## ## ##: ##:::: ##:. ######:: ##::::::: ########::: ##:: ########::::: ##::::\n:..... ##: #########: ##. ####: ##:::: ##::..... ##: ##::::::: ##.. ##:::: ##:: ##.....:::::: ##::::\n'##::: ##: ##.... ##: ##:. ###: ##:::: ##:'##::: ##: ##::: ##: ##::. ##::: ##:: ##::::::::::: ##::::\n. ######:: ##:::: ##: ##::. ##: ########::. ######::. ######:: ##:::. ##:'####: ##::::::::::: ##::::\n:......:::..:::::..::..::::..::........::::......::::......:::..:::::..::....::..::::::::::::..:::::\n:? to see available commands\n";
+var asciiart = "\n:'######:::::'###::::'##::: ##:'########:::'######:::'######::'########::'####:'########::'########:\n'##... ##:::'## ##::: ###:: ##: ##.... ##:'##... ##:'##... ##: ##.... ##:. ##:: ##.... ##:... ##..::\n.##:::..:::'##:. ##:: ####: ##: ##:::: ##: ##:::..:: ##:::..:: ##:::: ##:: ##:: ##:::: ##:::: ##::::\n. ######::'##:::. ##: ## ## ##: ##:::: ##:. ######:: ##::::::: ########::: ##:: ########::::: ##::::\n:..... ##: #########: ##. ####: ##:::: ##::..... ##: ##::::::: ##.. ##:::: ##:: ##.....:::::: ##::::\n'##::: ##: ##.... ##: ##:. ###: ##:::: ##:'##::: ##: ##::: ##: ##::. ##::: ##:: ##::::::::::: ##::::\n. ######:: ##:::: ##: ##::. ##: ########::. ######::. ######:: ##:::. ##:'####: ##::::::::::: ##::::\n:......:::..:::::..::..::::..::........::::......::::......:::..:::::..::....::..::::::::::::..:::::\n:? to see available commands\ngithub.com/thimoteus/SandScript for source\n";
 module.exports = {
     Environment: Environment, 
     Help: Help, 

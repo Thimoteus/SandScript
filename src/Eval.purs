@@ -58,10 +58,10 @@ eval (List (Atom "lambda" : List params : body)) = do
 eval (List (Atom "λ" : List params : body)) = do
   env <- get
   makeNormalFunc env params body
-eval (List (Atom "lambda" : varargs@(Atom _) : body)) = do
+eval (List (Atom "lambda" : (varargs@(Atom _)) : body)) = do
   env <- get
   makeVarArgs varargs env List.Nil body
-eval (List (Atom "λ" : varargs@(Atom _) : body)) = do
+eval (List (Atom "λ" : (varargs@(Atom _)) : body)) = do
   env <- get
   makeVarArgs varargs env List.Nil body
 eval (List (f : args)) = do
@@ -99,7 +99,7 @@ makeFunc vararg closure params body =
 makeNormalFunc :: forall m . Monad m => Env -> List.List WFF -> List.List WFF -> State m WFF
 makeNormalFunc = makeFunc Nothing
 
-makeVarArgs :: forall m b. (Monad m , Show b) => b -> Env -> List.List WFF -> List.List WFF -> State m WFF
+makeVarArgs :: forall m. (Monad m) => WFF -> Env -> List.List WFF -> List.List WFF -> State m WFF
 makeVarArgs = makeFunc <<< Just <<< show
 
 primitiveFuncs :: Env
