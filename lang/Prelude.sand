@@ -29,7 +29,7 @@
      (< x 0))
 
 (def (even? x)
-     (= (mod x 2) 0))
+     (= (% x 2) 0))
 
 (def (foldr f end lst)
      (if (null? lst)

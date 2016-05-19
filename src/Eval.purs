@@ -7,9 +7,9 @@ import Control.Monad.Error.Class (throwError)
 import Control.Monad.State.Trans (withStateT, get)
 
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe', fromMaybe')
+import Data.Maybe (maybe', fromMaybe')
 import Data.StrMap as Map
-import Data.Foldable (any, or)
+import Data.Foldable (class Foldable, any, or)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(Tuple))
 
@@ -43,27 +43,27 @@ runComputations env = runState env <<< readEvalMany
 eval :: forall m. Monad m => WFF -> State m WFF
 eval v@(String _) = pure v
 eval n@(Integer _) = pure n
+eval r@(Float _) = pure r
 eval b@(Bool _) = pure b
+eval v@(Vector _) = pure v
 eval (Atom i) = getVar i
 eval (List (Atom "quote" : q : List.Nil)) = pure q
 eval (List (Atom "if" : pred : conseq : alt : List.Nil)) = evalIf pred conseq alt
+eval (List (Atom "defn" : Atom v : Vector params : body)) = do
+  env <- get
+  defn <- makeFunc env params body
+  defineVar v defn
 eval (List (Atom "def" : Atom v : form : List.Nil)) = eval form >>= defineVar v
 eval (List (Atom "def" : List (Atom var : params) : body)) = do
   env <- get
-  defn <- makeNormalFunc env params body
+  defn <- makeFunc env params body
   defineVar var defn
 eval (List (Atom "lambda" : List params : body)) = do
   env <- get
-  makeNormalFunc env params body
+  makeFunc env params body
 eval (List (Atom "λ" : List params : body)) = do
   env <- get
-  makeNormalFunc env params body
-eval (List (Atom "lambda" : (varargs@(Atom _)) : body)) = do
-  env <- get
-  makeVarArgs varargs env List.Nil body
-eval (List (Atom "λ" : (varargs@(Atom _)) : body)) = do
-  env <- get
-  makeVarArgs varargs env List.Nil body
+  makeFunc env params body
 eval (List (f : args)) = do
   func <- eval f
   argv <- traverse eval args
@@ -72,23 +72,21 @@ eval bsf = throwError $ BadSpecialForm "Unrecognized special form" bsf
 
 mapply :: forall m. Monad m => WFF -> List.List WFF -> State m WFF
 mapply (PrimitiveFunc f) xs = liftThrows $ f xs
-mapply (Func {params, vararg, body, closure}) args =
+mapply (Func {params, body, closure}) args =
   let numParams = List.length params
       remainingArgs = List.drop numParams args
-      bindVarArgs (Just name) = bindVars $ Tuple name (List remainingArgs) : List.Nil
-      bindVarArgs _ = id
       getLast = maybe' (\_ -> throwError $ NotFunction "Not a function" "Needs a nonempty body") pure <<< List.last
       modifiedEval cls = withStateT (Map.union cls) <<< eval
       evalEach cls = traverse (modifiedEval cls) body
       evalBody cls = join $ getLast <$> evalEach cls
    in if numParams /= List.length args
          then throwError $ NumArgs numParams args
-         else retainState $ evalBody $ bindVarArgs vararg $ bindVars (List.zip params args) closure
+         else retainState $ evalBody $ bindVars (List.zip params args) closure
 mapply nf _ = throwError $ NotFunction "Expecting a function" (show nf <> " is not a function")
 
-makeFunc :: forall m. Monad m => Maybe String -> Env -> List.List WFF -> List.List WFF -> State m WFF
-makeFunc vararg closure params body =
-  let f = Func { params: (map show params), vararg, body, closure }
+makeFunc :: forall f m. (Functor f, Foldable f, Monad m) => Env -> f WFF -> List.List WFF -> State m WFF
+makeFunc closure params body =
+  let f = Func { params: List.fromFoldable (map show params), body, closure }
       isn'tAtom (Atom _) = false
       isn'tAtom _ = true
       someNonAtom = any isn'tAtom
@@ -96,11 +94,11 @@ makeFunc vararg closure params body =
          then throwError $ NotFunction "Not a function" "Function was ill defined"
          else pure f
 
-makeNormalFunc :: forall m . Monad m => Env -> List.List WFF -> List.List WFF -> State m WFF
-makeNormalFunc = makeFunc Nothing
+{-- makeNormalFunc :: forall m . Monad m => Env -> List.List WFF -> List.List WFF -> State m WFF --}
+{-- makeNormalFunc = makeFunc Nothing --}
 
-makeVarArgs :: forall m. (Monad m) => WFF -> Env -> List.List WFF -> List.List WFF -> State m WFF
-makeVarArgs = makeFunc <<< Just <<< show
+{-- makeVarArgs :: forall m b. (Monad m , Show b) => b -> Env -> List.List WFF -> List.List WFF -> State m WFF --}
+{-- makeVarArgs = makeFunc <<< Just <<< show --}
 
 primitiveFuncs :: Env
 primitiveFuncs = map PrimitiveFunc primitives
