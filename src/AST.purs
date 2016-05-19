@@ -6,9 +6,8 @@ import Control.Monad.Error.Class (catchError)
 
 import Data.Either (Either(..))
 import Data.List (List)
-import Data.Foldable (intercalate)
+import Data.Foldable (class Foldable, intercalate)
 import Data.StrMap (StrMap)
-import Data.Maybe (Maybe)
 
 import Partial.Unsafe (unsafePartial)
 
@@ -16,27 +15,30 @@ import Text.Parsing.Parser (ParseError(..))
 
 data WFF = Atom String
          | Integer Int
+         | Float Number
          | String String
          | Bool Boolean
          | List (List WFF)
+         | Vector (Array WFF)
          | PrimitiveFunc (PrimFn WFF)
          | Func { params :: List String
-                , vararg :: Maybe String
                 , body :: List WFF
                 , closure :: StrMap WFF
               }
 
 instance showWFF :: Show WFF where
   show (Atom n) = n
-  show (String s) = show s
   show (Integer n) = show n
+  show (Float n) = show n
+  show (String s) = show s
   show (Bool true) = "True"
   show (Bool _) = "False"
   show (List xs) = "(" <> unwordsList xs <> ")"
+  show (Vector xs) = "[" <> unwordsList xs <> "]"
   show (PrimitiveFunc _) = "<primitive>"
   show (Func _) = "function"
 
-unwordsList :: forall a. Show a => List a -> String
+unwordsList :: forall a f. (Show a, Foldable f, Functor f) => f a -> String
 unwordsList = intercalate " " <<< map show
 
 data LangError = NumArgs Int (List WFF)

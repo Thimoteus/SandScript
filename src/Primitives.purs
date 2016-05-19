@@ -1,11 +1,16 @@
 module SandScript.Primitives (primitives) where
 
 import Prelude
+
+import Control.Monad.Error.Class (throwError)
+
+import Data.Array as Array
 import Data.List as List
 import Data.StrMap as Map
-import Control.Monad.Error.Class (throwError)
 import Data.Foldable (foldl)
 import Data.Traversable (traverse)
+import Data.Maybe (Maybe(..))
+
 import SandScript.AST (LangError(..), ThrowsError, WFF(..), PrimFn)
 
 infixr 5 List.Cons as :
@@ -37,6 +42,7 @@ primitives = Map.empty
            # Map.insert "cons" evalCons
            # Map.insert "==" eqv
            # Map.insert "eqv" eqv
+           # Map.insert "!" evalIdx
 
 numericBinop :: Op -> PrimFn WFF
 numericBinop _ List.Nil = throwError $ NumArgs 2 List.Nil
@@ -85,20 +91,37 @@ intBoolBinop = boolBinop unpackInt
 
 evalHead :: PrimFn WFF
 evalHead ((List (x : _)) : List.Nil) = pure x
+evalHead ((List _) : List.Nil) = throwError $ TypeMismatch "nonempty list" (List List.Nil)
+evalHead ((Vector xs) : List.Nil) = case Array.uncons xs of
+  Just { head } -> pure head
+  _ -> throwError $ TypeMismatch "nonempty vector" (Vector [])
 evalHead (x : List.Nil) = throwError $ TypeMismatch "list" x
 evalHead xs = throwError $ NumArgs 1 xs
 
 evalTail :: PrimFn WFF
 evalTail ((List (_ : xs)) : List.Nil) = pure $ List xs
 evalTail ((List List.Nil) : List.Nil) = pure $ List List.Nil
+evalTail ((Vector xs) : List.Nil) = case Array.uncons xs of
+  Just { tail } -> pure $ Vector tail
+  _ -> pure $ Vector []
 evalTail (ba : List.Nil) = throwError $ TypeMismatch "list" ba
 evalTail xs = throwError $ NumArgs 1 xs
 
 evalCons :: PrimFn WFF
 evalCons (x : List.Nil) = pure $ List (x : List.Nil)
 evalCons (x : List xs : List.Nil) = pure $ List (x : xs)
+evalCons (x : Vector xs : List.Nil) = pure $ Vector $ Array.cons x xs
 evalCons (_ : x : _) = throwError $ TypeMismatch "collection" x
 evalCons ba = throwError $ NumArgs 2 ba
+
+evalIdx :: PrimFn WFF
+evalIdx (Integer n : List xs : List.Nil) = case List.index xs n of
+  Just x -> pure x
+  _ -> throwError $ Default $ "Index " <> show n <> " is out of bounds"
+evalIdx (Integer n : Vector xs : List.Nil) = case Array.index xs n of
+  Just x -> pure x
+  _ -> throwError $ Default $ "Index " <> show n <> " is out of bounds"
+evalIdx ba = throwError $ NumArgs 2 ba
 
 eqv :: PrimFn WFF
 eqv (Atom p : Atom q : List.Nil) = dumbEq p q

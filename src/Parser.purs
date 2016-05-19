@@ -3,71 +3,64 @@ module SandScript.Parser where
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Apply ((*>))
-import Control.Coercible (coerce)
 import Control.Lazy (fix)
 import Control.Monad.Error.Class (throwError)
 
+import Data.Functor (($>))
 import Data.Either (Either(..))
 import Data.List as L
+import Data.Array as A
 
 import SandScript.AST (WFF(..), ThrowsError, LangError(..))
-import SandScript.Parser.Common (whiteSpace, symbol, int, anyDigit, anyLetter, anyOf)
+import SandScript.Lexer (token)
 
 import Text.Parsing.Parser (Parser, runParser)
-import Text.Parsing.Parser.Combinators (sepBy, between, choice, try, (<?>))
-import Text.Parsing.Parser.String (char, string, noneOf)
+import Text.Parsing.Parser.Combinators (try, choice)
 
 infixr 5 L.Cons as :
 
 type P a = Parser String a
 
-anyTill :: Char -> P String
-anyTill c = do
-  xs <- L.many $ noneOf [c]
-  char c
-  pure $ coerce xs
+string :: P WFF
+string = String <$> token.stringLiteral
 
-anySymbol :: P Char
-anySymbol = anyOf "!#$%&|*+-/:<=>?@^_~"
+atom :: P WFF
+atom = Atom <$> token.identifier
 
-escaped :: P Char
-escaped = char '\\' *> anyOf "\\\"\n\r\t"
+bool :: P WFF
+bool = token.reserved "True" $> Bool true <|> token.reserved "False" $> Bool false
 
-parseString :: P WFF
-parseString =
-  String <<< coerce <$> between (char '"') (char '"') (L.many $ noneOf ['"', '\\'] <|> escaped)
+int :: P WFF
+int = Integer <$> token.integer
 
-parseAtom :: P WFF
-parseAtom = do
-  first <- anyLetter <|> anySymbol
-  rest <- L.many $ anyLetter <|> anyDigit <|> anySymbol
-  let atom = coerce $ first : rest
-  pure case atom of
-            "True" -> Bool true
-            "False" -> Bool false
-            _ -> Atom atom
+float :: P WFF
+float = Float <$> token.float
 
-parseInteger :: P WFF
-parseInteger = Integer <$> int
+list :: P WFF -> P WFF
+list p = token.parens (List <$> L.many p)
 
-parseList :: P WFF -> P WFF
-parseList p = List <$> sepBy p whiteSpace
+vector :: P WFF -> P WFF
+vector p = token.brackets (Vector <$> A.many p)
 
-parseQuoted :: P WFF -> P WFF
-parseQuoted p = do
-  string "'"
+quote :: P WFF -> P WFF
+quote p = do
+  token.reservedOp "'"
   x <- p
   pure $ List $ Atom "quote" : x : L.Nil
 
-parseExpr :: P WFF
-parseExpr = fix \ p ->
-            choice [ try parseInteger
-                   , parseString
-                   , parseAtom
-                   , parseQuoted p
-                   , between (symbol "(") (symbol ")") (parseList p) ]
-                   <?> "well-formed formula"
+expr :: P WFF
+expr = fix allExprs
+  where
+    allExprs p = choice
+      [ list p
+      , vector p
+      , quote p
+      , atom
+      , try float
+      , int
+      , string
+      , bool
+      ]
 
 readOrThrow :: forall a. P a -> String -> ThrowsError a
 readOrThrow pwff input = case runParser input pwff of
@@ -75,7 +68,11 @@ readOrThrow pwff input = case runParser input pwff of
                               Left err -> throwError $ ParseErr err
 
 read :: String -> ThrowsError WFF
-read = readOrThrow parseExpr
+read = readOrThrow expr
 
 readFile :: String -> ThrowsError (L.List WFF)
-readFile = readOrThrow $ parseExpr `sepBy` whiteSpace
+readFile = readOrThrow manyExpr
+  where
+    manyExpr = do
+      token.whiteSpace
+      L.many expr

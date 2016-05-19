@@ -3,8 +3,8 @@ module SandScript.Env where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, throwError)
-import Control.Monad.Except.Trans (ExceptT, runExceptT, mapExceptT)
-import Control.Monad.State.Trans (StateT, evalStateT, mapStateT, get, put)
+import Control.Monad.Except.Trans (ExceptT, runExceptT)
+import Control.Monad.State.Trans (StateT, evalStateT, put, get)
 
 import Data.StrMap as Map
 import Data.Either (Either(..))
@@ -17,6 +17,7 @@ import SandScript.AST (WFF, ThrowsError, LangError(SetImmutable, UnboundVar))
 type Env = Map.StrMap WFF
 type MThrowsError m = ExceptT LangError m
 type State m a = StateT Env (MThrowsError m) a
+{-- type State m a = (MonadState Env m, MonadError LangError m) => m a --}
 
 {-- isBound :: forall m. Monad m => String -> State m Boolean --}
 {-- isBound k = pure <<< Map.member k =<< (get :: State m Env) --}
@@ -52,16 +53,8 @@ liftThrows (Right v) = pure v
 liftThrows (Left e) = throwError e
 
 liftState :: forall m a. Monad m => ThrowsError a -> State m a
-liftState = liftThrows
-
-transformState :: forall a b m1 m2. (Monad m1, Monad m2) => (m1 (ThrowsError (Tuple a Env)) -> m2 (ThrowsError (Tuple b Env))) -> State m1 a -> State m2 b
-transformState f = mapStateT (mapExceptT f)
-
-stateToMThrows :: forall a m. Monad m => Env -> State m a -> MThrowsError m a
-stateToMThrows e s = evalStateT s e
-
-mThrowsToM :: forall a m. Monad m => MThrowsError m a -> m (ThrowsError a)
-mThrowsToM = runExceptT
+liftState (Right v) = pure v
+liftState (Left e) = throwError e
 
 runState :: forall a m. Monad m => Env -> State m a -> m (ThrowsError a)
-runState e s = mThrowsToM $ stateToMThrows e s
+runState e s = runExceptT $ evalStateT s e
