@@ -47,7 +47,7 @@ main = do
   case args !! 0 of
        Just "-i" -> repl
        Just "--interactive" -> repl
-       Just "-c" -> codeGen $ joinWith "\n" args
+       Just "-c" -> codeGen $ joinWith "\n" $ drop 1 args
        Just "--compile" -> codeGen $ joinWith "\n" $ drop 1 args
        Just _ -> runOne $ joinWith "\n" $ drop 1 args
        _ -> Console.error "Please provide a valid command"

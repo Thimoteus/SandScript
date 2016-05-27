@@ -6,7 +6,6 @@ import Data.List as List
 import Data.Array as Array
 import Data.String (fromCharArray, replace)
 import Data.Foldable (class Foldable, intercalate, foldl)
-import Data.Maybe (Maybe(..))
 
 infixr 5 List.Cons as :
 
@@ -22,10 +21,9 @@ data JSExpr = JSInt Int
             | JSBinop JSBinop JSExpr JSExpr
             | JSAssign Name JSExpr
             | JSFunCall JSExpr (List.List JSExpr)
-            | JSIf JSExpr JSExpr (Maybe JSExpr)
+            | JSIf JSExpr JSExpr JSExpr
             | JSArray (Array JSExpr)
             | JSList (List.List JSExpr)
-            | JSThrow String
 
 data JSBinop = Add | Sub | Mul | Div
 
@@ -51,24 +49,20 @@ generateJS doindent tabs = case _ of
   JSString s -> show s
   JSLambda vars expr -> (if doindent then indent tabs else id) $ unlines
     [ "function (" <> intercalate ", " vars <> ") {"
-    , indent (tabs + 1) $ generateJS false (tabs + 1) expr ] <> indent tabs "}"
+    , indent (tabs + 1) $ generateJS false (tabs + 1) expr
+    , indent tabs "}" ]
   JSBinop op e1 e2 -> "(" <> generateJS false tabs e1 <> " " <> generateJSOp op <> " " <> generateJS false tabs e2 <> ")"
   JSAssign var expr -> "var " <> escape var <> " = " <> generateJS false tabs expr <> ";"
   JSFunCall f exprs -> "(" <> generateJS false tabs f <> ")(" <> intercalate ", " (generateJS false tabs <$> exprs) <> ")"
   JSReturn expr -> (if doindent then indent tabs else id) $ "return " <> generateJS false tabs expr <> ";"
-  JSIf cond tr (Just fl) -> (if doindent then indent tabs else id) $
+  JSIf cond tr fl -> (if doindent then indent tabs else id) $
     unlines [ "if (" <> generateJS false tabs cond <> ") {"
             , indent (tabs + 1) $ generateJS false (tabs + 1) tr
             , indent tabs "} else {"
             , indent (tabs + 1) $ generateJS false (tabs + 1) fl
             , indent tabs "}" ]
-  JSIf cond tr _ -> (if doindent then indent tabs else id) $
-    unlines [ indent tabs "if (" <> generateJS false tabs cond <> ") {"
-            , indent (tabs + 1) $ generateJS false (tabs + 1) tr
-            , indent tabs "}" ]
   JSArray xs -> "[" <> intercalate ", " (generateJS false tabs <$> xs) <> "]"
   JSList xs -> generateList doindent tabs xs
-  JSThrow s -> "throw(new Error(" <> s <> "))"
 
 generateList :: Boolean -> Int -> List.List JSExpr -> String
 generateList doindent tabs = case _ of

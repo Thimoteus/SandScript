@@ -6,7 +6,6 @@ import SandScript.JS (JSExpr(..), JSBinop(..))
 
 import Data.List as List
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
 
 import Data.Traversable (traverse)
 
@@ -38,7 +37,8 @@ compile = case _ of
   List (Atom "quote" : (List xs) : List.Nil) -> JSList <$> traverse compile xs
   List (Atom "quote" : q : List.Nil) -> compile q
   List (Atom "if" : pred : conseq : alt : List.Nil) ->
-    JSIf <$> compile pred <*> compile conseq <*> (Just <$> compile alt)
+    let cond = JSIf <$> compile pred <*> (JSReturn <$> compile conseq) <*> (JSReturn <$> compile alt)
+     in flip JSFunCall List.Nil <<< JSLambda List.Nil <$> cond
   List (Atom "defn" : Atom v : Vector params : body : List.Nil) -> do
     args <- runAtoms $ List.fromFoldable params
     b <- compile body
