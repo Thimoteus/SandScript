@@ -22,7 +22,7 @@ data WFF = Atom String
          | Vector (Array WFF)
          | PrimitiveFunc (PrimFn WFF)
          | Func { params :: List String
-                , body :: List WFF
+                , body :: WFF
                 , closure :: StrMap WFF
               }
 

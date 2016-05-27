@@ -2,12 +2,11 @@ module SandScript.Eval where
 
 import Prelude
 
-import Control.Bind (join)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.State.Trans (withStateT, get)
 
 import Data.List as List
-import Data.Maybe (maybe', fromMaybe')
+import Data.Maybe (fromMaybe')
 import Data.StrMap as Map
 import Data.Foldable (class Foldable, any, or)
 import Data.Traversable (traverse)
@@ -49,19 +48,19 @@ eval v@(Vector _) = pure v
 eval (Atom i) = getVar i
 eval (List (Atom "quote" : q : List.Nil)) = pure q
 eval (List (Atom "if" : pred : conseq : alt : List.Nil)) = evalIf pred conseq alt
-eval (List (Atom "defn" : Atom v : Vector params : body)) = do
+eval (List (Atom "defn" : Atom v : Vector params : body : List.Nil)) = do
   env <- get
   defn <- makeFunc env params body
   defineVar v defn
 eval (List (Atom "def" : Atom v : form : List.Nil)) = eval form >>= defineVar v
-eval (List (Atom "def" : List (Atom var : params) : body)) = do
+eval (List (Atom "def" : List (Atom var : params) : body : List.Nil)) = do
   env <- get
   defn <- makeFunc env params body
   defineVar var defn
-eval (List (Atom "lambda" : List params : body)) = do
+eval (List (Atom "lambda" : List params : body : List.Nil)) = do
   env <- get
   makeFunc env params body
-eval (List (Atom "λ" : List params : body)) = do
+eval (List (Atom "λ" : List params : body : List.Nil)) = do
   env <- get
   makeFunc env params body
 eval (List (f : args)) = do
@@ -75,22 +74,20 @@ mapply (PrimitiveFunc f) xs = liftThrows $ f xs
 mapply (Func {params, body, closure}) args =
   let numParams = List.length params
       remainingArgs = List.drop numParams args
-      getLast = maybe' (\_ -> throwError $ NotFunction "Not a function" "Needs a nonempty body") pure <<< List.last
       modifiedEval cls = withStateT (Map.union cls) <<< eval
-      evalEach cls = traverse (modifiedEval cls) body
-      evalBody cls = join $ getLast <$> evalEach cls
+      evalBody cls = modifiedEval cls body
    in if numParams /= List.length args
          then throwError $ NumArgs numParams args
          else retainState $ evalBody $ bindVars (List.zip params args) closure
 mapply nf _ = throwError $ NotFunction "Expecting a function" (show nf <> " is not a function")
 
-makeFunc :: forall f m. (Functor f, Foldable f, Monad m) => Env -> f WFF -> List.List WFF -> State m WFF
+makeFunc :: forall f m. (Functor f, Foldable f, Monad m) => Env -> f WFF -> WFF -> State m WFF
 makeFunc closure params body =
   let f = Func { params: List.fromFoldable (map show params), body, closure }
       isn'tAtom (Atom _) = false
       isn'tAtom _ = true
       someNonAtom = any isn'tAtom
-   in if or [someNonAtom params, List.null body]
+   in if or [someNonAtom params]
          then throwError $ NotFunction "Not a function" "Function was ill defined"
          else pure f
 
