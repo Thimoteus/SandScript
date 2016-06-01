@@ -1,9 +1,8 @@
-module SandScript.REPL where
+module REPL where
 
 import Prelude
-
-import SandScript.Env (Env)
-import SandScript.Eval (runComputation, runComputations, primitiveFuncs)
+import Env (Env)
+import Eval (runComputation, runComputations, primitiveFuncs)
 
 import Control.Coercible (coerce)
 import Control.Monad.Aff (Aff, makeAff, attempt)

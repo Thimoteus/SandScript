@@ -1,0 +1,30 @@
+;; module Test.Sand where
+
+(module Test [print map-arr un-oo])
+
+(ffi "const id = function (x) {\n  return x;\n}")
+
+(def print (ffi-fun "console.log({{x}})"))
+
+(def map-arr
+  (ffi-fun
+    "{{x}}.map({{f}})"))
+
+(def un-oo
+  (ffi-fun "{{x}}.{{y}}({{z}})"))
+
+(macro JS#binop "+" add)
+
+(macro JS#unop "!" not)
+
+(def (plus x y z)
+  (add x y z))
+
+(def (negate x)
+  (not x))
+
+(def main
+  (if true
+    (not true)
+    false))
+

@@ -1,4 +1,4 @@
-module SandScript.JS where
+module CodeGen.JS.JS where
 
 import Prelude
 
@@ -18,14 +18,18 @@ data JSExpr = JSInt Int
             | JSSymbol Name
             | JSReturn JSExpr
             | JSLambda (List.List Name) JSExpr
-            | JSBinop JSBinop JSExpr JSExpr
+            | JSBinop JSBinop (List.List JSExpr)
+            | JSUnop JSUnop JSExpr
             | JSAssign Name JSExpr
             | JSFunCall JSExpr (List.List JSExpr)
             | JSIf JSExpr JSExpr JSExpr
             | JSArray (Array JSExpr)
-            | JSList (List.List JSExpr)
+            | FFI String
+            | Export (Array String)
 
-data JSBinop = Add | Sub | Mul | Div
+newtype JSBinop = Binop String
+
+newtype JSUnop = Unop String
 
 indent :: Int -> String -> String
 indent tabs e = (fromCharArray $ Array.replicate tabs ' ') <> e
@@ -33,12 +37,11 @@ indent tabs e = (fromCharArray $ Array.replicate tabs ' ') <> e
 unlines :: forall f. Foldable f => f String -> String
 unlines = intercalate "\n"
 
-generateJSOp :: JSBinop -> String
-generateJSOp = case _ of
-  Add -> " + "
-  Sub -> " - "
-  Mul -> "*"
-  Div -> "/"
+generateJSBinop :: JSBinop -> String
+generateJSBinop (Binop s) = s
+
+generateJSUnop :: JSUnop -> String
+generateJSUnop (Unop s) = s
 
 generateJS :: Boolean -> Int -> JSExpr -> String
 generateJS doindent tabs = case _ of
@@ -51,7 +54,8 @@ generateJS doindent tabs = case _ of
     [ "function (" <> intercalate ", " vars <> ") {"
     , indent (tabs + 1) $ generateJS false (tabs + 1) expr
     , indent tabs "}" ]
-  JSBinop op e1 e2 -> "(" <> generateJS false tabs e1 <> " " <> generateJSOp op <> " " <> generateJS false tabs e2 <> ")"
+  JSBinop op cs -> "(" <> intercalate (generateJSBinop op) (generateJS false tabs <$> cs) <> ")"
+  JSUnop op e -> generateJSUnop op <> "(" <> generateJS false tabs e <> ")"
   JSAssign var expr -> "var " <> escape var <> " = " <> generateJS false tabs expr <> ";"
   JSFunCall f exprs -> "(" <> generateJS false tabs f <> ")(" <> intercalate ", " (generateJS false tabs <$> exprs) <> ")"
   JSReturn expr -> (if doindent then indent tabs else id) $ "return " <> generateJS false tabs expr <> ";"
@@ -62,15 +66,14 @@ generateJS doindent tabs = case _ of
             , indent (tabs + 1) $ generateJS false (tabs + 1) fl
             , indent tabs "}" ]
   JSArray xs -> "[" <> intercalate ", " (generateJS false tabs <$> xs) <> "]"
-  JSList xs -> generateList doindent tabs xs
+  FFI s -> s
+  Export xs ->
+    let firstln = "module.exports = {"
+        lastln = "}"
+        midlns = intercalate ",\n" $ map (indent 2 <<< (\ x -> show x <> ": " <> escape x)) xs
+     in unlines [firstln, midlns, lastln]
 
-generateList :: Boolean -> Int -> List.List JSExpr -> String
-generateList doindent tabs = case _ of
-  (x : xs) -> unlines [ "{val: " <> generateJS doindent tabs x <> ", "
-                      , "next:" <> generateList doindent tabs xs <> "}"
-                      ]
-  _ -> "{}"
-
+--"!#$%&|*+-/:<=>?@^_~"
 escape :: String -> String
 escape = until eq singleReplace
   where
@@ -81,11 +84,11 @@ escape = until eq singleReplace
     , replace "%" "$PERCENT"
     , replace ":" "$COLON"
     , replace "<" "$LESSTHAN"
-    , replace "=" "$GREATERTHAN"
+    , replace ">" "$GREATERTHAN"
     , replace "@" "$AT"
+    , replace "+" "$PLUS"
     ]
 
---"!#$%&|*+-/:<=>?@^_~"
 until :: forall a. (a -> a -> Boolean) -> (a -> a) -> a -> a
 until f g x | f x (g x) = g x
 until f g x = until f g (g x)

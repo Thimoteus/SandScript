@@ -1,6 +1,6 @@
-module SandScript.Lexer where
+module Lexer where
 
-import SandScript.Parser.Common (anyOf)
+import Parser.Common (anyOf)
 
 import Control.Alt ((<|>))
 

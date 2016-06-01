@@ -1,6 +1,10 @@
-module SandScript.Eval where
+module Eval where
 
 import Prelude
+import Syntax (WFF(..), LangError(..), ThrowsError)
+import Env (Env, State, runState, liftState, defineVar, getVar, liftThrows, bindVars, retainState)
+import Parser (read, readFile)
+import Primitives (primitives)
 
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.State.Trans (withStateT, get)
@@ -11,11 +15,6 @@ import Data.StrMap as Map
 import Data.Foldable (class Foldable, any, or)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(Tuple))
-
-import SandScript.AST (WFF(..), LangError(..), ThrowsError)
-import SandScript.Env (Env, State, runState, liftState, defineVar, getVar, liftThrows, bindVars, retainState)
-import SandScript.Parser (read, readFile)
-import SandScript.Primitives (primitives)
 
 infixr 5 List.Cons as :
 

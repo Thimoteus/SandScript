@@ -1,4 +1,4 @@
-module SandScript.AST where
+module Syntax where
 
 import Prelude
 

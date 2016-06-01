@@ -1,6 +1,12 @@
 module Main where
 
 import Prelude
+import Eval (primitiveFuncs, runComputations)
+import REPL (ReplEff, runRepl)
+import Parser (readFile)
+import Macro (macroize)
+import CodeGen.JS.Compile (compile)
+import CodeGen.JS.JS (generateJS)
 
 import Control.Monad.Eff.Console as Console
 import Control.Monad.Aff (runAff)
@@ -18,12 +24,6 @@ import Data.Traversable (traverse)
 
 import Node.Process (PROCESS, argv)
 
-import SandScript.Eval (primitiveFuncs, runComputations)
-import SandScript.REPL (ReplEff, runRepl)
-import SandScript.Parser (readFile)
-import SandScript.Compile (compile)
-import SandScript.JS (generateJS)
-
 repl :: forall e. Eff (ReplEff e) Unit
 repl = runAff (Console.log <<< message) pure runRepl
 
@@ -35,7 +35,7 @@ runOne input = case runTrampoline $ runComputations primitiveFuncs input of
 codeGen :: forall e. String -> Eff ( console :: Console.CONSOLE | e ) Unit
 codeGen input = case readFile input of
   Left err -> Console.error $ show err
-  Right wffs -> case traverse compile wffs of
+  Right wffs -> case traverse compile $ macroize wffs of
     Left err -> Console.error $ show err
     Right jsexprs ->
       let output = generateJS true 0 <$> jsexprs

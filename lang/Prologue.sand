@@ -1,0 +1,21 @@
+;; FFI-definitions for the Javascript compiler
+
+(module Prologue '(map idx head negate))
+
+(macro JS#binop "+" add)
+(macro JS#binop "-" sub)
+(macro JS#binop "*" mul)
+(macro JS#binop "/" div)
+(macro JS#binop ">" gt)
+(macro JS#binop "<" lt)
+(macro JS#binop "<=" lte)
+(macro JS#binop ">=" gte)
+(macro JS#unop "!" not)
+
+(def map
+  (ffi-fun "{{x}}.map({{f}})"))
+
+(def idx
+  (ffi-fun "{{x}}[{{i}}]"))
+
+(def (head x) (idx 0 x))

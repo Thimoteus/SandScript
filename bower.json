@@ -19,7 +19,8 @@
     "purescript-aff": "^0.16.1",
     "purescript-node-fs-aff": "^0.6.0",
     "purescript-random": "^0.2.3",
-    "purescript-free": "^0.9.1"
+    "purescript-free": "^0.9.1",
+    "purescript-sets": "^0.5.7"
   },
   "devDependencies": {
     "purescript-console": "^0.1.1",

@@ -1,6 +1,7 @@
-module SandScript.Env where
+module Env where
 
 import Prelude
+import Syntax (WFF, ThrowsError, LangError(SetImmutable, UnboundVar))
 
 import Control.Monad.Error.Class (class MonadError, throwError)
 import Control.Monad.Except.Trans (ExceptT, runExceptT)
@@ -11,8 +12,6 @@ import Data.Either (Either(..))
 import Data.List (List)
 import Data.Maybe (Maybe(Just))
 import Data.Tuple (Tuple)
-
-import SandScript.AST (WFF, ThrowsError, LangError(SetImmutable, UnboundVar))
 
 type Env = Map.StrMap WFF
 type MThrowsError m = ExceptT LangError m

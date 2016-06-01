@@ -1,6 +1,7 @@
-module SandScript.Primitives (primitives) where
+module Primitives (primitives) where
 
 import Prelude
+import Syntax (LangError(..), ThrowsError, WFF(..), PrimFn)
 
 import Control.Monad.Error.Class (throwError)
 
@@ -10,8 +11,6 @@ import Data.StrMap as Map
 import Data.Foldable (foldl)
 import Data.Traversable (traverse)
 import Data.Maybe (Maybe(..))
-
-import SandScript.AST (LangError(..), ThrowsError, WFF(..), PrimFn)
 
 infixr 5 List.Cons as :
 

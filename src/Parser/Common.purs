@@ -1,4 +1,4 @@
-module SandScript.Parser.Common where
+module Parser.Common where
 
 import Control.Coercible (coerce)
 

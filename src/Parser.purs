@@ -1,6 +1,8 @@
-module SandScript.Parser where
+module Parser where
 
 import Prelude
+import Syntax (WFF(..), ThrowsError, LangError(..))
+import Lexer (token)
 
 import Control.Alt ((<|>))
 import Control.Lazy (fix)
@@ -10,9 +12,6 @@ import Data.Functor (($>))
 import Data.Either (Either(..))
 import Data.List as L
 import Data.Array as A
-
-import SandScript.AST (WFF(..), ThrowsError, LangError(..))
-import SandScript.Lexer (token)
 
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Combinators (try, choice)
