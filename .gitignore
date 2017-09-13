@@ -1,4 +1,3 @@
-.psci*
 bower_components/
 output/
 node_modules
@@ -8,3 +7,5 @@ ssc.js
 *~
 *.swp
 *.swo
+
+*.psc*
