@@ -11,6 +11,8 @@ data ExprF r
   | Lambda String r
   | LetIn String r r
   | Apply r r
+  | Fix r
+  | If r r r
 
 derive instance eqExprF :: Eq r => Eq (ExprF r)
 derive instance ordExprF :: Ord r => Ord (ExprF r)
@@ -45,3 +47,9 @@ lambda name body = In $ Lambda name body
 
 applyE :: Expr -> Expr -> Expr
 applyE f expr = In $ Apply f expr
+
+fix :: Expr -> Expr
+fix = In <<< Fix
+
+ifE :: Expr -> Expr -> Expr -> Expr
+ifE c t f = In $ If c t f
